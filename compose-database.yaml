@@ -10,7 +10,7 @@ services:
         ports:
             - ${POSTGRES_PORT:-5434}:5432
         volumes:
-            - hermesdb:/var/lib/postgresql/data
+            - hermesdb:/var/lib/postgresql
             - ${POSTGRES_PGCONF:-./hermes/datamodel/alembic/postgresql.conf}:/settings/extra.conf
         networks:
             - hermesnet
