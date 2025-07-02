@@ -27,15 +27,15 @@ def list():
         if scheduler.schedule_exists:
             fs_with_schedule.append(fs)
 
-    if not fseries:
+    if not fs_with_schedule:
         console.print("No Schedules found.")
         return
 
-    table = console_table(fseries, ['name',
-                                    'schedule_starttime',
-                                    'schedule_endtime',
-                                    'schedule_interval',
-                                    'schedule_active'])
+    table = console_table(fs_with_schedule, ['name',
+                                             'schedule_starttime',
+                                             'schedule_endtime',
+                                             'schedule_interval',
+                                             'schedule_active'])
 
     console.print(table)
 
