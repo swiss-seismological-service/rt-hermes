@@ -12,6 +12,9 @@ This project is under active development. The goal is to provide an orchestratio
 
 For v0 of the project, see the [gitlab repository](https://gitlab.seismo.ethz.ch/indu/rt-ramsis)
 
+### 1.2 Caveat
+This project does not distribute any earthquake forecast models. It is merely a framework to run and schedule earthquake forecast models. The models need to be installed separately. Please look at the [hermes-model](https://github.com/swiss-seismological-service/hermes-model) repository for more information on how to install and use a model with HERMES.
+
 ## 2. Installation
 This installation instruction is merely a recommendation for a user of the software. Depending on your preferences and knowledge, you are free to choose a different setup.
 
@@ -159,7 +162,7 @@ hermes schedules catchup fs_induced
 __Note__ that a schedule can either lie in the past, the future, or both. The `catchup` command will only execute forecasts in the past, while the service will automatically execute forecasts in the future.
 
 ### 3.6 Debugging
-To view the forecasts and modelruns, currently only the webservice is available. The available endpoints are listed in the [API documentation](http://localhost:8000/docs).
+To view the forecasts and modelruns, currently only the webservice is available. The available endpoints are listed in the API documentation: [http://localhost:8000/docs](http://localhost:8000/docs).
 
 A quick description of the way to traverse the API is as follows:
 To view the `Projects`, you can navigate to the following URL: [http://localhost:8000/v1/projects](http://localhost:8000/v1/projects). Copy the `oid` of the project you'd like to access.
