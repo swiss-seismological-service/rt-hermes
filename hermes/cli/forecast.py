@@ -6,7 +6,7 @@ from prefect.deployments import run_deployment
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.actions.crud_models import delete_forecast, read_forecastseries_oid
+from hermes.services.forecast_service import delete_forecast, get_forecastseries_oid
 from hermes.cli.utils import console_table
 from hermes.flows.forecast_handler import forecast_runner
 from hermes.repositories.database import DatabaseSession
@@ -25,7 +25,7 @@ def list(
                                   help="Name or UUID of "
                                   "the ForecastSeries.")],):
     with DatabaseSession() as session:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         forecasts = ForecastRepository.get_by_forecastseries(
             session, forecastseries_oid)
     if not forecasts:
@@ -59,7 +59,7 @@ def run(
 ):
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
 
         mode = 'local' if local else 'deploy'
         if local:

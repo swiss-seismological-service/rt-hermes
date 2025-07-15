@@ -6,11 +6,11 @@ from prefect import serve as serve_fs
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.actions.crud_models import (create_forecastseries,
-                                        delete_forecastseries,
-                                        read_forecastseries_oid,
-                                        read_project_oid,
-                                        update_forecastseries)
+from hermes.services.forecast_service import (create_forecastseries,
+                                             delete_forecastseries,
+                                             get_forecastseries_oid,
+                                             update_forecastseries)
+from hermes.services.project_service import get_project_oid
 from hermes.cli.utils import console_table, console_tree
 from hermes.flows.forecast_handler import forecast_runner
 from hermes.flows.modelrun_handler import default_model_runner
@@ -44,7 +44,7 @@ def show(forecastseries:
                        help="Name or UUID of the ForecastSeries.")]):
 
     with DatabaseSession() as session:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         forecast_series = ForecastSeriesRepository.get_by_id(
             session, forecastseries_oid)
 
@@ -79,7 +79,7 @@ def create(name: Annotated[str,
         fseries_config = json.load(project_file)
 
     try:
-        project_oid = read_project_oid(project)
+        project_oid = get_project_oid(project)
 
         forecast_series_out = create_forecastseries(
             name, fseries_config, project_oid)
@@ -108,7 +108,7 @@ def update(
         fseries_config = json.load(project_file)
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
 
         forecast_series_out = update_forecastseries(
             fseries_config, forecastseries_oid, force)
@@ -127,7 +127,7 @@ def delete(
                                   help="Name or UUID of the ForecastSeries.")]
 ):
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
 
         delete_forecastseries(forecastseries_oid)
 
@@ -146,7 +146,7 @@ def serve(
                                  typer.Option()] = 3
 ):
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
 
         with DatabaseSession() as session:
             forecastseries = ForecastSeriesRepository.get_by_id(

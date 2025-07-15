@@ -6,23 +6,23 @@ import pandas as pd
 from seismostats import ForecastCatalog
 from shapely import from_wkt
 
-from hermes.actions.save_results import (
-    save_forecast_catalog_to_repositories,
-    save_forecast_grrategrid_to_repositories)
+from hermes.services.result_service import (
+    save_forecast_catalog,
+    save_forecast_grrategrid)
 
 MODULE_LOCATION = os.path.dirname(os.path.abspath(__file__))
 
 
-@patch('hermes.actions.save_results.TimeStepRepository.get_or_create',
+@patch('hermes.services.result_service.TimeStepRepository.get_or_create',
        autospec=True)
-@patch('hermes.actions.save_results.GridCellRepository.get_or_create',
+@patch('hermes.services.result_service.GridCellRepository.get_or_create',
        autospec=True)
-@patch('hermes.actions.save_results.ModelResultRepository.batch_create',
+@patch('hermes.services.result_service.ModelResultRepository.batch_create',
        autospec=True)
-@patch('hermes.actions.save_results.EventForecastRepository.'
+@patch('hermes.services.result_service.EventForecastRepository.'
        'create_from_forecast_catalog',
        autospec=True)
-def test_save_forecast_catalog_to_repositories(mock_seismic_event_repo,
+def test_save_forecast_catalog(mock_seismic_event_repo,
                                                mock_model_result_repo,
                                                mock_grid_cell_repo,
                                                mock_time):
@@ -37,18 +37,18 @@ def test_save_forecast_catalog_to_repositories(mock_seismic_event_repo,
     catalog.depth_min = 0
     catalog.depth_max = 100
 
-    save_forecast_catalog_to_repositories(MagicMock(), None, None, catalog)
+    save_forecast_catalog(MagicMock(), None, None, catalog)
 
     # TODO: Add assertions
 
 
-@patch('hermes.actions.save_results.TimeStepRepository.get_or_create',
+@patch('hermes.services.result_service.TimeStepRepository.get_or_create',
        autospec=True)
-@patch('hermes.actions.save_results.GridCellRepository.get_or_create',
+@patch('hermes.services.result_service.GridCellRepository.get_or_create',
        autospec=True)
-@patch('hermes.actions.save_results.ModelResultRepository.batch_create',
+@patch('hermes.services.result_service.ModelResultRepository.batch_create',
        autospec=True)
-@patch('hermes.actions.save_results.GRParametersRepository.'
+@patch('hermes.services.result_service.GRParametersRepository.'
        'create_from_forecast_grrategrid',
        autospec=True)
 def test_save_grrategrid_to_repositories(mock_grparameters_repo,
@@ -72,6 +72,6 @@ def test_save_grrategrid_to_repositories(mock_grparameters_repo,
 
     rategrid = pd.concat([rategrid, rategrid2])
 
-    save_forecast_grrategrid_to_repositories(MagicMock(), None, None, rategrid)
+    save_forecast_grrategrid(MagicMock(), None, None, rategrid)
 
     # TODO: Add assertions

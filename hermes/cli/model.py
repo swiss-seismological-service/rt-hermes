@@ -5,12 +5,12 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.actions.crud_models import (archive_modelconfig,
-                                        create_modelconfig, delete_modelconfig,
-                                        disable_modelconfig,
-                                        enable_modelconfig,
-                                        read_modelconfig_oid,
-                                        update_modelconfig)
+from hermes.services.model_service import (archive_modelconfig,
+                                          create_modelconfig, delete_modelconfig,
+                                          disable_modelconfig,
+                                          enable_modelconfig,
+                                          get_modelconfig_oid,
+                                          update_modelconfig)
 from hermes.cli.utils import console_table, console_tree
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ModelConfigRepository
@@ -39,7 +39,7 @@ def show(
                            typer.Argument(
                                help="Name or UUID of the ModelConfig.")]):
     with DatabaseSession() as session:
-        modelconfig_oid = read_modelconfig_oid(modelconfig)
+        modelconfig_oid = get_modelconfig_oid(modelconfig)
         model_config = ModelConfigRepository.get_by_id(
             session, modelconfig_oid)
 
@@ -91,7 +91,7 @@ def update(
         new_config = json.load(project_file)
 
     try:
-        modelconfig_oid = read_modelconfig_oid(modelconfig)
+        modelconfig_oid = get_modelconfig_oid(modelconfig)
 
         model_config_out = update_modelconfig(
             new_config, modelconfig_oid, force)
@@ -112,7 +112,7 @@ def delete(
     Only possible if no ModelRun exists for the ModelConfig.
     """
     try:
-        modelconfig_oid = read_modelconfig_oid(modelconfig)
+        modelconfig_oid = get_modelconfig_oid(modelconfig)
 
         delete_modelconfig(modelconfig_oid)
 
@@ -128,7 +128,7 @@ def disable(
                            typer.Argument(
                                help="Name or UUID of the ModelConfig.")]):
     try:
-        modelconfig_oid = read_modelconfig_oid(modelconfig)
+        modelconfig_oid = get_modelconfig_oid(modelconfig)
 
         model_config_out = disable_modelconfig(modelconfig_oid)
 
@@ -145,7 +145,7 @@ def enable(
                            typer.Argument(
                                help="Name or UUID of the ModelConfig.")]):
     try:
-        modelconfig_oid = read_modelconfig_oid(modelconfig)
+        modelconfig_oid = get_modelconfig_oid(modelconfig)
 
         model_config_out = enable_modelconfig(modelconfig_oid)
 
@@ -163,7 +163,7 @@ def archive(
                                help="Name or UUID of the ModelConfig.")]):
 
     try:
-        modelconfig_oid = read_modelconfig_oid(modelconfig)
+        modelconfig_oid = get_modelconfig_oid(modelconfig)
 
         model_config_out = archive_modelconfig(modelconfig_oid)
 

@@ -12,7 +12,7 @@ from hermes.schemas import GridCell, TimeStep
 from hermes.schemas.base import EResultType
 
 
-def save_forecast_catalog_to_repositories(
+def save_forecast_catalog(
         session,
         forecastseries_oid: UUID,
         modelrun_oid: UUID,
@@ -45,7 +45,7 @@ def save_forecast_catalog_to_repositories(
         session, forecast_catalog, ids)
 
 
-def save_forecast_grrategrid_to_repositories(
+def save_forecast_grrategrid(
         session,
         forecastseries_oid: UUID,
         modelrun_oid: UUID,
