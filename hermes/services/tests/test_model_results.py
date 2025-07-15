@@ -6,9 +6,8 @@ import pandas as pd
 from seismostats import ForecastCatalog
 from shapely import from_wkt
 
-from hermes.services.result_service import (
-    save_forecast_catalog,
-    save_forecast_grrategrid)
+from hermes.services.result_service import (save_forecast_catalog,
+                                            save_forecast_grrategrid)
 
 MODULE_LOCATION = os.path.dirname(os.path.abspath(__file__))
 
@@ -23,9 +22,9 @@ MODULE_LOCATION = os.path.dirname(os.path.abspath(__file__))
        'create_from_forecast_catalog',
        autospec=True)
 def test_save_forecast_catalog(mock_seismic_event_repo,
-                                               mock_model_result_repo,
-                                               mock_grid_cell_repo,
-                                               mock_time):
+                               mock_model_result_repo,
+                               mock_grid_cell_repo,
+                               mock_time):
     catalog_path = os.path.join(
         MODULE_LOCATION, '../../repositories/tests/data/catalog.parquet.gzip')
 

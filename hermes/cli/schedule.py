@@ -5,11 +5,11 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.services.forecast_service import get_forecastseries_oid
 from hermes.cli.utils import console_table, console_tree
 from hermes.flows.forecastseries_scheduler import ForecastSeriesScheduler
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastSeriesRepository
+from hermes.services.forecast_service import get_forecastseries_oid
 
 app = typer.Typer()
 console = Console()
