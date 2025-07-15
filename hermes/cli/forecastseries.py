@@ -6,17 +6,17 @@ from prefect import serve as serve_fs
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.services.forecast_service import (create_forecastseries,
-                                             delete_forecastseries,
-                                             get_forecastseries_oid,
-                                             update_forecastseries)
-from hermes.services.project_service import get_project_oid
 from hermes.cli.utils import console_table, console_tree
 from hermes.flows.forecast_handler import forecast_runner
 from hermes.flows.modelrun_handler import default_model_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastSeriesRepository
 from hermes.schemas.project_schemas import ForecastSeriesConfig
+from hermes.services.forecast_service import (create_forecastseries,
+                                              delete_forecastseries,
+                                              get_forecastseries_oid,
+                                              update_forecastseries)
+from hermes.services.project_service import get_project_oid
 
 app = typer.Typer()
 console = Console()

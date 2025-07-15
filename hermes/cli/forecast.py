@@ -6,12 +6,13 @@ from prefect.deployments import run_deployment
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.services.forecast_service import delete_forecast, get_forecastseries_oid
 from hermes.cli.utils import console_table
 from hermes.flows.forecast_handler import forecast_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import (ForecastRepository,
                                          ForecastSeriesRepository)
+from hermes.services.forecast_service import (delete_forecast,
+                                              get_forecastseries_oid)
 
 app = typer.Typer()
 console = Console()

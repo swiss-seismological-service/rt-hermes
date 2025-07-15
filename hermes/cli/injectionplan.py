@@ -5,12 +5,12 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.services.forecast_service import get_forecastseries_oid
-from hermes.services.injection_service import (create_injectionplan_template,
-                                              delete_injectionplan)
 from hermes.cli.utils import console_table
 from hermes.repositories.data import InjectionPlanRepository
 from hermes.repositories.database import DatabaseSession
+from hermes.services.forecast_service import get_forecastseries_oid
+from hermes.services.injection_service import (create_injectionplan_template,
+                                               delete_injectionplan)
 
 app = typer.Typer()
 console = Console()

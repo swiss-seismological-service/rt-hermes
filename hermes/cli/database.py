@@ -1,7 +1,7 @@
 import typer
+from alembic import command
 from rich.console import Console
 
-from alembic import command
 from hermes.datamodel.alembic.utils import ALEMBIC_CFG, check_current_head
 from hermes.repositories.database import (_check_tables_exist, _create_tables,
                                           _drop_tables)

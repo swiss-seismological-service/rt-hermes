@@ -5,15 +5,16 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.services.model_service import (archive_modelconfig,
-                                          create_modelconfig, delete_modelconfig,
-                                          disable_modelconfig,
-                                          enable_modelconfig,
-                                          get_modelconfig_oid,
-                                          update_modelconfig)
 from hermes.cli.utils import console_table, console_tree
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ModelConfigRepository
+from hermes.services.model_service import (archive_modelconfig,
+                                           create_modelconfig,
+                                           delete_modelconfig,
+                                           disable_modelconfig,
+                                           enable_modelconfig,
+                                           get_modelconfig_oid,
+                                           update_modelconfig)
 
 app = typer.Typer()
 console = Console()

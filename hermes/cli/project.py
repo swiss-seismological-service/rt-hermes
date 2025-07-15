@@ -5,12 +5,12 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.services.project_service import (delete_project, get_project_oid,
-                                            update_project)
 from hermes.cli.utils import console_table
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ProjectRepository
 from hermes.schemas import Project
+from hermes.services.project_service import (delete_project, get_project_oid,
+                                             update_project)
 
 app = typer.Typer()
 console = Console()
