@@ -5,8 +5,8 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.actions.crud_models import (delete_project, read_project_oid,
-                                        update_project)
+from hermes.services.project_service import (delete_project, get_project_oid,
+                                            update_project)
 from hermes.cli.utils import console_table
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ProjectRepository
@@ -71,7 +71,7 @@ def update(
         with open(config, "r") as project_file:
             project_config_dict = json.load(project_file)
 
-        project_oid = read_project_oid(name)
+        project_oid = get_project_oid(name)
         update_project(project_config_dict, project_oid)
         console.print(f'Successfully updated Project {name}.')
     except Exception as e:
@@ -85,7 +85,7 @@ def delete(
                     typer.Argument(
                         help="Name or UUID of the project.")]):
     try:
-        project_oid = read_project_oid(name)
+        project_oid = get_project_oid(name)
         delete_project(project_oid)
         console.print(f'Successfully deleted Project {name}.')
     except Exception as e:

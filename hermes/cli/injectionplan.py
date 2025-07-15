@@ -5,9 +5,9 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.actions.crud_models import (create_injectionplan_template,
-                                        delete_injectionplan,
-                                        read_forecastseries_oid)
+from hermes.services.forecast_service import get_forecastseries_oid
+from hermes.services.injection_service import (create_injectionplan_template,
+                                              delete_injectionplan)
 from hermes.cli.utils import console_table
 from hermes.repositories.data import InjectionPlanRepository
 from hermes.repositories.database import DatabaseSession
@@ -23,7 +23,7 @@ def list(forecastseries:
                        help="Name or UUID of the ForecastSeries.")]):
 
     with DatabaseSession() as session:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         if not forecastseries_oid:
             console.print("ForecastSeries not found.")
             raise typer.Exit(code=1)
@@ -58,7 +58,7 @@ def create(name: Annotated[str,
         injectionplan = json.load(injectionplan_file)
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
 
         forecast_series_out = create_injectionplan_template(
             name, injectionplan, forecastseries_oid)

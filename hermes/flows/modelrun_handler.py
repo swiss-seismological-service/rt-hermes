@@ -8,9 +8,9 @@ from hermes_model import ModelInput
 from prefect import flow, get_run_logger, task
 from seismostats import ForecastCatalog, ForecastGRRateGrid
 
-from hermes.actions.save_results import (
-    save_forecast_catalog_to_repositories,
-    save_forecast_grrategrid_to_repositories)
+from hermes.services.result_service import (
+    save_forecast_catalog,
+    save_forecast_grrategrid)
 from hermes.repositories.data import (InjectionObservationRepository,
                                       InjectionPlanRepository,
                                       SeismicityObservationRepository)
@@ -162,7 +162,7 @@ class DefaultModelRunHandler(ModelRunHandlerInterface):
 
     def _save_catalog(self, results: list[ForecastCatalog]) -> None:
         for catalog in results:
-            save_forecast_catalog_to_repositories(
+            save_forecast_catalog(
                 self.session,
                 self.modelrun_info.forecastseries_oid,
                 self.modelrun.oid,
@@ -173,7 +173,7 @@ class DefaultModelRunHandler(ModelRunHandlerInterface):
 
     def _save_grid(self, results: list[ForecastGRRateGrid]) -> None:
         for grid in results:
-            save_forecast_grrategrid_to_repositories(
+            save_forecast_grrategrid(
                 self.session,
                 self.modelrun_info.forecastseries_oid,
                 self.modelrun.oid,

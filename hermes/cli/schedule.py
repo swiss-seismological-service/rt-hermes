@@ -5,7 +5,7 @@ import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
-from hermes.actions.crud_models import read_forecastseries_oid
+from hermes.services.forecast_service import get_forecastseries_oid
 from hermes.cli.utils import console_table, console_tree
 from hermes.flows.forecastseries_scheduler import ForecastSeriesScheduler
 from hermes.repositories.database import DatabaseSession
@@ -48,7 +48,7 @@ def show(
                                   "the ForecastSeries.")]):
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
         exists = scheduler.schedule_exists
         fs_config = scheduler.schedule_info
@@ -84,7 +84,7 @@ def create(
         schedule_config = json.load(project_file)
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
         scheduler.create(schedule_config)
 
@@ -103,7 +103,7 @@ def delete(
                                   "the ForecastSeries.")]):
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
 
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
         scheduler.delete_schedule()
@@ -122,7 +122,7 @@ def activate(
                                   "the ForecastSeries.")]):
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
         scheduler.update_status(active=True)
 
@@ -141,7 +141,7 @@ def deactivate(
                                   "the ForecastSeries.")]):
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
         scheduler.update_status(active=False)
 
@@ -167,7 +167,7 @@ def catchup(
     mode = 'local' if local else 'deploy'
 
     try:
-        forecastseries_oid = read_forecastseries_oid(forecastseries)
+        forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
         scheduler.run_past_forecasts(mode)
     except BaseException as e:
