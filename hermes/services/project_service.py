@@ -43,7 +43,8 @@ def delete_project(project_oid: UUID):
             session, project_oid)
 
     for fseries in forecastseries:
-        from hermes.services.forecast_service import delete_forecastseries
+        from hermes.services.forecastseries_service import \
+            delete_forecastseries
         delete_forecastseries(fseries.oid)
 
     # delete project

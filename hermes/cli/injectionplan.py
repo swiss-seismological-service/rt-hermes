@@ -8,7 +8,7 @@ from typing_extensions import Annotated
 from hermes.cli.utils import console_table
 from hermes.repositories.data import InjectionPlanRepository
 from hermes.repositories.database import DatabaseSession
-from hermes.services.forecast_service import get_forecastseries_oid
+from hermes.services.forecastseries_service import get_forecastseries_oid
 from hermes.services.injection_service import (create_injectionplan_template,
                                                delete_injectionplan)
 
