@@ -10,7 +10,7 @@ from hermes.repositories.data import InjectionPlanRepository
 from hermes.repositories.project import (ForecastSeriesRepository,
                                          ModelConfigRepository,
                                          ProjectRepository)
-from hermes.repositories.tests.conftest import connection, session, setup_db
+# Database fixtures now available from package root conftest.py
 from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
                             ForecastSeries, ModelConfig, Project)
 from hermes.schemas.data_schemas import InjectionPlan
@@ -23,14 +23,7 @@ def prefect():
             yield
 
 
-# session fixture
-session
-
-# connection fixture
-connection
-
-# setup_db fixture
-setup_db
+# Database fixtures are now auto-discovered from package root hermes/conftest.py
 
 
 @pytest.fixture()

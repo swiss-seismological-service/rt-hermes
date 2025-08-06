@@ -1,3 +1,9 @@
+"""
+Shared pytest fixtures for all test layers.
+
+This conftest.py is at the package root and provides fixtures that are
+automatically discoverable by all test directories in the hermes package.
+"""
 from datetime import datetime
 
 import pytest
@@ -21,6 +27,7 @@ settings = get_settings()
 
 
 def delete_database(connection: Connection, db_name: str):
+    """Helper to clean up test database."""
     connection.execute(text("ROLLBACK"))
     try:
         connection.execute(text(f"DROP DATABASE {db_name}"))
@@ -29,13 +36,14 @@ def delete_database(connection: Connection, db_name: str):
         connection.execute(text("ROLLBACK"))
     except OperationalError:
         print(
-            "Could not drop database because it’s "
+            "Could not drop database because it's "
             "being accessed by other users (psql prompt open?)")
         connection.execute(text("ROLLBACK"))
 
 
 @pytest.fixture(scope="class")
 def connection(request: pytest.FixtureRequest) -> object:
+    """Create a test database connection for all layers."""
     test_db_name = f"{settings.POSTGRES_DB}_test"
 
     url = URL.create(
@@ -78,13 +86,12 @@ def connection(request: pytest.FixtureRequest) -> object:
 
 @pytest.fixture(scope="class", autouse=True)
 def setup_db(connection, request: pytest.FixtureRequest) -> None:
-    """Setup test database.
+    """Setup test database tables.
 
     Creates all database tables as declared in SQLAlchemy models,
     then proceeds to drop all the created tables after all tests
     have finished running.
     """
-
     ORMBase.metadata.create_all(connection.engine)
 
     def teardown():
@@ -97,13 +104,14 @@ def setup_db(connection, request: pytest.FixtureRequest) -> None:
 
 @pytest.fixture(autouse=True)
 def session(connection, request: pytest.FixtureRequest):
+    """Create a database session with transaction rollback for test isolation."""
     transaction = connection.begin()
     session = scoped_session(sessionmaker(
         bind=connection, expire_on_commit=False))
 
     session.begin_nested()
 
-    # Restart savepoint after each commit (do I want this?)
+    # Restart savepoint after each commit
     @event.listens_for(session, "after_transaction_end")
     def restart_savepoint(db_session, transaction):
         if transaction.nested and not transaction._parent.nested:
@@ -121,6 +129,7 @@ def session(connection, request: pytest.FixtureRequest):
 
 @pytest.fixture()
 def project(session) -> Project:
+    """Create a test project with standard defaults."""
     project = Project(
         name='test_project',
         description='test_description',
@@ -135,6 +144,7 @@ def project(session) -> Project:
 
 @pytest.fixture()
 def forecastseries(session, project):
+    """Create a test forecastseries with standard defaults."""
     forecastseries = ForecastSeries(
         name='test_forecastseries',
         schedule_starttime=datetime(2021, 1, 2, 0, 0, 0),
@@ -160,6 +170,7 @@ def forecastseries(session, project):
 
 @pytest.fixture()
 def forecast(session, forecastseries):
+    """Create a test forecast with standard defaults."""
     forecast = Forecast(
         forecastseries_oid=forecastseries.oid,
         status=EStatus.PENDING,
@@ -174,6 +185,7 @@ def forecast(session, forecastseries):
 
 @pytest.fixture()
 def model_config(session):
+    """Create a test model configuration with standard defaults."""
     model_config = ModelConfig(
         name='test_model',
         description='test_description',

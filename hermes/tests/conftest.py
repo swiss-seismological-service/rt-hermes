@@ -11,7 +11,7 @@ from hermes.config import get_settings
 from hermes.repositories.project import (ForecastSeriesRepository,
                                          ModelConfigRepository,
                                          ProjectRepository)
-from hermes.repositories.tests.conftest import connection, session, setup_db
+# Fixtures now available from package root conftest.py
 from hermes.schemas import (EInput, EResultType, EStatus, ForecastSeries,
                             ModelConfig, Project)
 
@@ -19,34 +19,17 @@ MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'data')
 settings = get_settings()
 
-# session fixture
-session
+# Fixtures are now auto-discovered from package root hermes/conftest.py
 
-# connection fixture
-connection
-
-# setup_db fixture
-setup_db
+# This conftest.py can contain additional specialized fixtures specific to hermes/tests/ if needed
+# Standard domain fixtures (project, forecastseries, model_config) are available from package root
 
 
 @pytest.fixture()
-def project(session) -> Project:
-    project = Project(
-        name='test_project',
-        description='test_description',
-        starttime=datetime(2022, 1, 1, 0, 0, 0),
-        endtime=datetime(2022, 3, 1, 0, 0, 0)
-    )
-
-    project = ProjectRepository.create(session, project)
-
-    return project
-
-
-@pytest.fixture()
-def forecastseries(session, project):
+def specialized_forecastseries(session, project):
+    """Specialized forecastseries with complex configuration for specific tests."""
     forecastseries = ForecastSeries(
-        name='test_forecastseries',
+        name='test_forecastseries_specialized',
         schedule_starttime=datetime(2022, 1, 1, 0, 0, 0),
         forecast_duration=30 * 24 * 3600,
         observation_starttime=datetime(1992, 1, 1),
@@ -69,9 +52,10 @@ def forecastseries(session, project):
 
 
 @pytest.fixture()
-def model_config(session):
+def specialized_model_config(session):
+    """Specialized model config with complex parameters for specific tests."""
     model_config = ModelConfig(
-        name='test_model',
+        name='test_model_specialized',
         description='test_description',
         tags=['tag1', 'tag3'],
         result_type=EResultType.CATALOG,
