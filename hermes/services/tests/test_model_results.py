@@ -1,67 +1,23 @@
 """Contract-based functional tests for model result services."""
 from datetime import datetime
 
+import pytest
 from sqlalchemy import text
 
 from hermes.datamodel.result_tables import (GridCellTable,
                                             ModelResultTable, TimeStepTable)
 from hermes.services.result_service import (save_forecast_catalog,
                                             save_forecast_grrategrid)
-from hermes.tests.helpers import TestDataFactory, TestDataGenerator
-
-
-def create_test_dependencies(session):
-    """Create minimal test dependencies for service tests."""
-    from hermes.repositories.project import (ForecastRepository,
-                                             ForecastSeriesRepository,
-                                             ModelConfigRepository,
-                                             ProjectRepository)
-
-    # Create test project
-    project = TestDataFactory.create_project()
-    project = ProjectRepository.create(session, project)
-
-    # Create test forecastseries
-    forecastseries = TestDataFactory.create_forecastseries(
-        project_oid=project.oid
-    )
-    forecastseries = ForecastSeriesRepository.create(session, forecastseries)
-
-    # Create test model config
-    model_config = TestDataFactory.create_model_config()
-    model_config = ModelConfigRepository.create(session, model_config)
-
-    # Create test forecast
-    from hermes.schemas import Forecast
-    from hermes.schemas.base import EStatus
-
-    forecast = Forecast(
-        forecastseries_oid=forecastseries.oid,
-        status=EStatus.PENDING,
-        starttime=datetime(2022, 1, 1),
-        endtime=datetime(2022, 1, 31)
-    )
-    forecast = ForecastRepository.create(session, forecast)
-
-    # Create test modelrun
-    from hermes.datamodel.result_tables import ModelRunTable
-    modelrun = ModelRunTable(
-        modelconfig_oid=model_config.oid,
-        forecast_oid=forecast.oid,
-        status=EStatus.PENDING.value
-    )
-    session.add(modelrun)
-    session.commit()
-
-    return forecastseries, modelrun
+from hermes.tests.data_factories import TestDataGenerator
 
 
 class TestSaveForecastCatalog:
     """Test forecast catalog service contract and business logic."""
 
-    def test_saves_all_catalog_events(self, session):
+    def test_saves_all_catalog_events(
+            self, session, modelrun_with_dependencies):
         """Test service persists complete catalog data correctly."""
-        forecastseries, modelrun = create_test_dependencies(session)
+        forecastseries, modelrun = modelrun_with_dependencies
 
         # Create test catalog with known dimensions
         catalog = TestDataGenerator.create_forecast_catalog(
@@ -115,9 +71,9 @@ class TestSaveForecastCatalog:
         ).scalar()
         assert event_count == 30, "Should create 30 EventForecast records"
 
-    def test_handles_empty_catalog(self, session):
+    def test_handles_empty_catalog(self, session, modelrun_with_dependencies):
         """Test service handles empty catalog gracefully."""
-        forecastseries, modelrun = create_test_dependencies(session)
+        forecastseries, modelrun = modelrun_with_dependencies
 
         # Create empty catalog
         catalog = TestDataGenerator.create_forecast_catalog(
@@ -149,29 +105,18 @@ class TestSaveForecastCatalog:
 class TestSaveForecastGRRateGrid:
     """Test GR rate grid service contract and spatial grouping logic."""
 
-    def test_spatial_grouping_behavior(self, session):
+    def test_spatial_grouping_behavior(
+            self, session, modelrun_with_dependencies):
         """Test service correctly groups rate grid by spatial cells."""
-        forecastseries, modelrun = create_test_dependencies(session)
+        forecastseries, modelrun = modelrun_with_dependencies
 
         # Create rate grid with 2 spatial cells, multiple entries per cell
-        import pandas as pd
-        rategrid_data = {
-            # Cell 1: (5-6, 45-46) - 2 entries, Cell 2: (6-7, 46-47) - 2
-            'longitude_min': [5.0, 5.0, 6.0, 6.0],
-            'longitude_max': [6.0, 6.0, 7.0, 7.0],
-            'latitude_min': [45.0, 45.0, 46.0, 46.0],
-            'latitude_max': [46.0, 46.0, 47.0, 47.0],
-            'depth_min': [0, 0, 0, 0],
-            'depth_max': [10, 10, 10, 10],
-            'grid_id': [0, 1, 0, 1],  # 0-indexed within each spatial group
-            'b_value': [1.0, 1.1, 1.2, 1.3],
-            'a_value': [2.0, 2.1, 2.2, 2.3],
-            'magnitude_max': [5.0, 5.1, 5.2, 5.3]
-        }
-
-        rategrid = pd.DataFrame(rategrid_data)
-        rategrid.starttime = datetime(2022, 1, 1)
-        rategrid.endtime = datetime(2022, 1, 31)
+        rategrid = TestDataGenerator.create_rate_grid(
+            n_cells=2,
+            entries_per_cell=2,
+            starttime=datetime(2022, 1, 1),
+            endtime=datetime(2022, 1, 31)
+        )
 
         # Execute service
         save_forecast_grrategrid(
@@ -215,28 +160,17 @@ class TestSaveForecastGRRateGrid:
             assert result.timestep_oid == timestep.oid
             assert result.gridcell_oid in [gc.oid for gc in gridcells]
 
-    def test_single_spatial_cell(self, session):
+    def test_single_spatial_cell(self, session, modelrun_with_dependencies):
         """Test service handles single spatial cell correctly."""
-        forecastseries, modelrun = create_test_dependencies(session)
+        forecastseries, modelrun = modelrun_with_dependencies
 
         # Create rate grid with single spatial location, multiple entries
-        import pandas as pd
-        rategrid_data = {
-            'longitude_min': [5.0, 5.0, 5.0],
-            'longitude_max': [6.0, 6.0, 6.0],
-            'latitude_min': [45.0, 45.0, 45.0],
-            'latitude_max': [46.0, 46.0, 46.0],
-            'depth_min': [0, 0, 0],
-            'depth_max': [10, 10, 10],
-            'grid_id': [0, 1, 2],  # 0-indexed within the single spatial group
-            'b_value': [1.0, 1.1, 1.2],
-            'a_value': [2.0, 2.1, 2.2],
-            'magnitude_max': [5.0, 5.1, 5.2]
-        }
-
-        rategrid = pd.DataFrame(rategrid_data)
-        rategrid.starttime = datetime(2022, 1, 1)
-        rategrid.endtime = datetime(2022, 1, 31)
+        rategrid = TestDataGenerator.create_rate_grid(
+            n_cells=1,
+            entries_per_cell=3,
+            starttime=datetime(2022, 1, 1),
+            endtime=datetime(2022, 1, 31)
+        )
 
         # Execute service
         save_forecast_grrategrid(
@@ -254,31 +188,23 @@ class TestSaveForecastGRRateGrid:
         ).all()
         assert len(model_results) == 3, "Should create 3 ModelResult records"
 
-    def test_error_handling_invalid_grid_id(self, session):
+    def test_error_handling_invalid_grid_id(
+            self, session, modelrun_with_dependencies):
         """Test service handles invalid grid_id gracefully."""
-        forecastseries, modelrun = create_test_dependencies(session)
+        forecastseries, modelrun = modelrun_with_dependencies
 
-        # Create rate grid with invalid grid_id (too high)
-        import pandas as pd
-        rategrid_data = {
-            'longitude_min': [5.0, 5.0],
-            'longitude_max': [6.0, 6.0],
-            'latitude_min': [45.0, 45.0],
-            'latitude_max': [46.0, 46.0],
-            'depth_min': [0, 0],
-            'depth_max': [10, 10],
-            'grid_id': [0, 2],  # Invalid: should be [0, 1] for 2 entries
-            'b_value': [1.0, 1.1],
-            'a_value': [2.0, 2.1],
-            'magnitude_max': [5.0, 5.1]
-        }
-
-        rategrid = pd.DataFrame(rategrid_data)
-        rategrid.starttime = datetime(2022, 1, 1)
-        rategrid.endtime = datetime(2022, 1, 31)
+        # Create rate grid with invalid grid_id (manually set to test error
+        # handling)
+        rategrid = TestDataGenerator.create_rate_grid(
+            n_cells=1,
+            entries_per_cell=2,
+            starttime=datetime(2022, 1, 1),
+            endtime=datetime(2022, 1, 31)
+        )
+        # Manually corrupt grid_id to test error handling
+        rategrid['grid_id'] = [0, 2]  # Invalid: should be [0, 1] for 2 entries
 
         # Should raise ValueError for invalid grid_id
-        import pytest
         with pytest.raises(ValueError,
                            match="number of modelresult_oids is less"):
             save_forecast_grrategrid(
@@ -289,9 +215,10 @@ class TestSaveForecastGRRateGrid:
 class TestServiceDataIntegrity:
     """Test service maintains data integrity across operations."""
 
-    def test_reuse_existing_timestep_and_gridcell(self, session):
+    def test_reuse_existing_timestep_and_gridcell(
+            self, session, modelrun_with_dependencies):
         """Test service reuses existing TimeStep and GridCell records."""
-        forecastseries, modelrun1 = create_test_dependencies(session)
+        forecastseries, modelrun1 = modelrun_with_dependencies
 
         # Create first catalog
         catalog1 = TestDataGenerator.create_forecast_catalog(

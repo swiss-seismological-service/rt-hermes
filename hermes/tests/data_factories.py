@@ -1,5 +1,10 @@
 """
-Test data helpers for creating realistic test scenarios.
+Consolidated test data generation for all test layers.
+
+This module provides a clean hierarchy for test data creation:
+- TestDataFactory: Creates simple domain objects (schemas)
+- TestDataGenerator: Creates complex data structures
+- TestScenarioBuilder: Creates complete test scenarios with dependencies
 """
 import uuid
 from datetime import datetime, timedelta
@@ -10,12 +15,12 @@ import pandas as pd
 from seismostats import ForecastCatalog
 from shapely import Polygon
 
-from hermes.schemas import (EInput, EResultType, ForecastSeries,
-                            ModelConfig, Project)
+from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
+                            ForecastSeries, ModelConfig, Project)
 
 
 class TestDataFactory:
-    """Factory for creating realistic test data objects."""
+    """Factory for creating simple domain objects with realistic defaults."""
 
     @staticmethod
     def create_project(
@@ -102,9 +107,32 @@ class TestDataFactory:
 
         return ModelConfig(**defaults)
 
+    @staticmethod
+    def create_forecast(
+        forecastseries_oid: uuid.UUID,
+        starttime: Optional[datetime] = None,
+        endtime: Optional[datetime] = None,
+        **kwargs
+    ) -> Forecast:
+        """Create a test Forecast with realistic defaults."""
+        if starttime is None:
+            starttime = datetime(2022, 1, 1)
+        if endtime is None:
+            endtime = datetime(2022, 1, 31)
+
+        defaults = {
+            'forecastseries_oid': forecastseries_oid,
+            'status': EStatus.PENDING,
+            'starttime': starttime,
+            'endtime': endtime
+        }
+        defaults.update(kwargs)
+
+        return Forecast(**defaults)
+
 
 class TestDataGenerator:
-    """Utilities for generating test data for services."""
+    """Utilities for generating complex test data structures."""
 
     @staticmethod
     def create_forecast_catalog(
@@ -161,3 +189,116 @@ class TestDataGenerator:
         forecast_catalog.depth_max = kwargs.get('depth_max', 10)
 
         return forecast_catalog
+
+    @staticmethod
+    def create_rate_grid(
+        n_cells: int = 2,
+        entries_per_cell: int = 2,
+        **kwargs
+    ) -> pd.DataFrame:
+        """Create a GR rate grid DataFrame for testing."""
+        rategrid_data = {
+            'longitude_min': [],
+            'longitude_max': [],
+            'latitude_min': [],
+            'latitude_max': [],
+            'depth_min': [],
+            'depth_max': [],
+            'grid_id': [],
+            'b_value': [],
+            'a_value': [],
+            'magnitude_max': []
+        }
+
+        for cell_id in range(n_cells):
+            # Create spatial bounds for this cell
+            lon_min = 5.0 + cell_id
+            lon_max = lon_min + 1.0
+            lat_min = 45.0 + cell_id
+            lat_max = lat_min + 1.0
+
+            for entry_id in range(entries_per_cell):
+                rategrid_data['longitude_min'].append(lon_min)
+                rategrid_data['longitude_max'].append(lon_max)
+                rategrid_data['latitude_min'].append(lat_min)
+                rategrid_data['latitude_max'].append(lat_max)
+                rategrid_data['depth_min'].append(kwargs.get('depth_min', 0))
+                rategrid_data['depth_max'].append(kwargs.get('depth_max', 10))
+                # 0-indexed within each spatial cell
+                rategrid_data['grid_id'].append(entry_id)
+                rategrid_data['b_value'].append(1.0 + entry_id * 0.1)
+                rategrid_data['a_value'].append(2.0 + entry_id * 0.1)
+                rategrid_data['magnitude_max'].append(5.0 + entry_id * 0.1)
+
+        rategrid = pd.DataFrame(rategrid_data)
+        rategrid.starttime = kwargs.get('starttime', datetime(2022, 1, 1))
+        rategrid.endtime = kwargs.get('endtime', datetime(2022, 1, 31))
+
+        return rategrid
+
+
+class TestScenarioBuilder:
+    """Creates complete test scenarios with all dependencies."""
+
+    @staticmethod
+    def create_full_modelrun_scenario(session, **kwargs):
+        """Create complete scenario: project → series → forecast → modelrun."""
+        from hermes.repositories.project import (ForecastRepository,
+                                                 ForecastSeriesRepository,
+                                                 ModelConfigRepository,
+                                                 ProjectRepository)
+        from hermes.datamodel.result_tables import ModelRunTable
+
+        # Create project
+        project = TestDataFactory.create_project(**kwargs.get('project', {}))
+        project = ProjectRepository.create(session, project)
+
+        # Create forecastseries
+        forecastseries = TestDataFactory.create_forecastseries(
+            project_oid=project.oid,
+            **kwargs.get('forecastseries', {})
+        )
+        forecastseries = ForecastSeriesRepository.create(
+            session, forecastseries)
+
+        # Create model config
+        model_config = TestDataFactory.create_model_config(
+            **kwargs.get('model_config', {})
+        )
+        model_config = ModelConfigRepository.create(session, model_config)
+
+        # Create forecast
+        forecast = TestDataFactory.create_forecast(
+            forecastseries_oid=forecastseries.oid,
+            **kwargs.get('forecast', {})
+        )
+        forecast = ForecastRepository.create(session, forecast)
+
+        # Create modelrun
+        modelrun = ModelRunTable(
+            modelconfig_oid=model_config.oid,
+            forecast_oid=forecast.oid,
+            status=EStatus.PENDING.value
+        )
+        session.add(modelrun)
+        session.commit()
+
+        # Return a simple namespace object with all components
+        class Scenario:
+            pass
+
+        scenario = Scenario()
+        scenario.project = project
+        scenario.forecastseries = forecastseries
+        scenario.model_config = model_config
+        scenario.forecast = forecast
+        scenario.modelrun = modelrun
+
+        return scenario
+
+    @staticmethod
+    def create_service_test_scenario(session, **kwargs):
+        """Create scenario optimized for service layer testing."""
+        scenario = TestScenarioBuilder.create_full_modelrun_scenario(
+            session, **kwargs)
+        return scenario.forecastseries, scenario.modelrun

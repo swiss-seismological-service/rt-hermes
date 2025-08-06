@@ -2,8 +2,6 @@ import uuid
 from datetime import datetime
 
 import pytest
-from prefect.logging import disable_run_logger
-from prefect.testing.utilities import prefect_test_harness
 from shapely import Polygon
 
 from hermes.repositories.data import InjectionPlanRepository
@@ -16,14 +14,8 @@ from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
 from hermes.schemas.data_schemas import InjectionPlan
 
 
-@pytest.fixture(scope="class")
-def prefect():
-    with prefect_test_harness():
-        with disable_run_logger():
-            yield
-
-
-# Database fixtures are now auto-discovered from package root hermes/conftest.py
+# Database fixtures auto-discovered from package root hermes/conftest.py
+# Prefect fixture is also now available from package root
 
 
 @pytest.fixture()

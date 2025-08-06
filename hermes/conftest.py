@@ -7,6 +7,8 @@ automatically discoverable by all test directories in the hermes package.
 from datetime import datetime
 
 import pytest
+from prefect.logging import disable_run_logger
+from prefect.testing.utilities import prefect_test_harness
 from shapely import Polygon
 from sqlalchemy import Connection, event, text
 from sqlalchemy.engine import URL
@@ -22,6 +24,7 @@ from hermes.repositories.project import (ForecastRepository,
                                          ProjectRepository)
 from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
                             ForecastSeries, ModelConfig, Project)
+from hermes.tests.data_factories import TestScenarioBuilder
 
 settings = get_settings()
 
@@ -104,7 +107,7 @@ def setup_db(connection, request: pytest.FixtureRequest) -> None:
 
 @pytest.fixture(autouse=True)
 def session(connection, request: pytest.FixtureRequest):
-    """Create a database session with transaction rollback for test isolation."""
+    """Create database session with transaction rollback for test isolation."""
     transaction = connection.begin()
     session = scoped_session(sessionmaker(
         bind=connection, expire_on_commit=False))
@@ -148,7 +151,7 @@ def forecastseries(session, project):
     forecastseries = ForecastSeries(
         name='test_forecastseries',
         schedule_starttime=datetime(2021, 1, 2, 0, 0, 0),
-        forecast_endtime=datetime(2021, 1, 4, 0, 0, 0),
+        forecast_endtime=datetime(2025, 1, 4, 0, 0, 0),
         observation_starttime=datetime(2021, 1, 1, 0, 0, 0),
         project_oid=project.oid,
         status=EStatus.PENDING,
@@ -192,10 +195,32 @@ def model_config(session):
         tags=['tag1', 'tag3'],
         result_type=EResultType.CATALOG,
         enabled=True,
-        sfm_module='test_module',
-        sfm_function='test_function',
+        sfm_module='hermes.tests.model_mock',
+        sfm_function='model_mock',
         model_parameters={'setting1': 'value1',
                           'setting2': 'value2'}
     )
     model_config = ModelConfigRepository.create(session, model_config)
     return model_config
+
+
+# Scenario Fixtures for Complex Test Scenarios
+
+@pytest.fixture()
+def full_scenario(session):
+    """Complete test scenario: project → series → forecast → modelrun."""
+    return TestScenarioBuilder.create_full_modelrun_scenario(session)
+
+
+@pytest.fixture()
+def modelrun_with_dependencies(session):
+    """ModelRun with all required dependencies for service testing."""
+    return TestScenarioBuilder.create_service_test_scenario(session)
+
+
+@pytest.fixture(scope="class")
+def prefect():
+    """Prefect test harness for all tests."""
+    with prefect_test_harness():
+        with disable_run_logger():
+            yield
