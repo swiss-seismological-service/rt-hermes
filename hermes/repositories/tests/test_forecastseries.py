@@ -1,25 +1,19 @@
-import json
-import os
-
 from shapely.geometry import Polygon
 from sqlalchemy import text
 
 from hermes.repositories.project import (ForecastSeriesRepository,
                                          ProjectRepository)
-from hermes.schemas.project_schemas import ForecastSeries
-
-MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'data')
+from hermes.tests.data_factories import TestDataFactory
 
 
 class TestForecastseries:
 
     def test_create(self, connection, session, full_scenario):
-        with open(os.path.join(MODULE_LOCATION, 'forecastseries.json')) as f:
-            forecastseries = ForecastSeries(
-                name='forecastseries',
-                project_oid=full_scenario.project.oid,
-                **json.load(f))
+        forecastseries = TestDataFactory.create_forecastseries(
+            name='forecastseries',
+            project_oid=full_scenario.project.oid,
+            tags=['INDUCED', 'FORGE']
+        )
 
         forecastseries = ForecastSeriesRepository.create(
             session, forecastseries)

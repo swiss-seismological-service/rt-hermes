@@ -1,22 +1,18 @@
-import json
-import os
-
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from hermes.repositories.project import ModelConfigRepository
-from hermes.schemas import ModelConfig
-
-MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'data')
+from hermes.tests.data_factories import TestDataFactory
 
 
 class TestModel:
 
     def test_create(self, connection, session):
-        with open(os.path.join(MODULE_LOCATION, 'model.json')) as f:
-            model_config = ModelConfig(name='config', **json.load(f))
+        model_config = TestDataFactory.create_model_config(
+            name='config',
+            tags=['INDUCED', 'FORGE']
+        )
 
         model_config = ModelConfigRepository.create(session, model_config)
 
@@ -30,8 +26,10 @@ class TestModel:
         assert "INDUCED" in tags
 
     def test_unique(self, session):
-        with open(os.path.join(MODULE_LOCATION, 'model.json')) as f:
-            model_config = ModelConfig(name='config', **json.load(f))
+        model_config = TestDataFactory.create_model_config(
+            name='config',
+            tags=['INDUCED', 'FORGE']
+        )
 
         ModelConfigRepository.create(session, model_config)
 

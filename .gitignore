@@ -1,5 +1,6 @@
 ## Derived Files
 coverage.xml
+.claude/
 
 # Python
 _old/
