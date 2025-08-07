@@ -2,10 +2,13 @@
 from datetime import datetime
 
 import pytest
-from sqlalchemy import text
 
-from hermes.datamodel.result_tables import (GridCellTable,
-                                            ModelResultTable, TimeStepTable)
+from hermes.repositories.results import (EventForecastRepository,
+                                         GridCellRepository,
+                                         GRParametersRepository,
+                                         ModelResultRepository,
+                                         ModelRunRepository,
+                                         TimeStepRepository)
 from hermes.services.result_service import (save_forecast_catalog,
                                             save_forecast_grrategrid)
 from hermes.tests.data_factories import TestDataGenerator
@@ -32,43 +35,40 @@ class TestSaveForecastCatalog:
             session, forecastseries.oid, modelrun.oid, catalog
         )
 
-        # Verify business outcomes through database state
+        # Verify business outcomes through repository interfaces
 
         # 1. TimeStep should be created with correct temporal bounds
-        timestep = session.query(TimeStepTable).filter_by(
-            forecastseries_oid=forecastseries.oid,
-            starttime=datetime(2022, 1, 1),
-            endtime=datetime(2022, 1, 31)
-        ).first()
+        timestep = TimeStepRepository.find_by_bounds(
+            session, forecastseries.oid,
+            datetime(2022, 1, 1), datetime(2022, 1, 31)
+        )
         assert timestep is not None, "TimeStep should be created"
 
         # 2. GridCell should be created with correct spatial bounds
-        gridcell = session.query(GridCellTable).filter_by(
-            forecastseries_oid=forecastseries.oid,
-            depth_min=0,
-            depth_max=10
-        ).first()
+        gridcell = GridCellRepository.find_by_spatial_bounds(
+            session, forecastseries.oid, 0, 10
+        )
         assert gridcell is not None, "GridCell should be created"
 
         # 3. ModelResult records should match catalog count
-        model_results = session.query(ModelResultTable).filter_by(
-            modelrun_oid=modelrun.oid
-        ).all()
-        assert len(model_results) == 3, "Should create 3 ModelResult records"
+        model_result_count = ModelResultRepository.count_by_modelrun(
+            session, modelrun.oid
+        )
+        assert model_result_count == 3, "Should create 3 ModelResult records"
 
         # 4. All ModelResults should link to correct entities
+        model_results = ModelResultRepository.get_by_modelrun(
+            session, modelrun.oid
+        )
         for result in model_results:
             assert result.timestep_oid == timestep.oid
             assert result.gridcell_oid == gridcell.oid
             assert result.result_type == 'CATALOG'
 
         # 5. EventForecast records should match total events
-        event_count = session.execute(
-            text('SELECT COUNT(*) FROM eventforecast WHERE '
-                 'modelresult_oid IN (SELECT oid FROM modelresult WHERE '
-                 'modelrun_oid = :modelrun_oid)'),
-            {'modelrun_oid': modelrun.oid}
-        ).scalar()
+        event_count = EventForecastRepository.count_by_modelrun(
+            session, modelrun.oid
+        )
         assert event_count == 30, "Should create 30 EventForecast records"
 
     def test_handles_empty_catalog(self, session, modelrun_with_dependencies):
@@ -87,18 +87,15 @@ class TestSaveForecastCatalog:
         )
 
         # Should still create structural records
-        timestep = session.query(TimeStepTable).filter_by(
-            forecastseries_oid=forecastseries.oid
-        ).first()
-        assert timestep is not None
+        gridcells = GridCellRepository.find_by_forecastseries(
+            session, forecastseries.oid
+        )
+        assert len(gridcells) > 0, "Should create structural records"
 
         # But no event records
-        event_count = session.execute(
-            text('SELECT COUNT(*) FROM eventforecast WHERE '
-                 'modelresult_oid IN (SELECT oid FROM modelresult WHERE '
-                 'modelrun_oid = :modelrun_oid)'),
-            {'modelrun_oid': modelrun.oid}
-        ).scalar()
+        event_count = EventForecastRepository.count_by_modelrun(
+            session, modelrun.oid
+        )
         assert event_count == 0
 
 
@@ -126,36 +123,34 @@ class TestSaveForecastGRRateGrid:
         # Verify spatial grouping outcomes
 
         # 1. TimeStep created correctly
-        timestep = session.query(TimeStepTable).filter_by(
-            forecastseries_oid=forecastseries.oid,
-            starttime=datetime(2022, 1, 1),
-            endtime=datetime(2022, 1, 31)
-        ).first()
+        timestep = TimeStepRepository.find_by_bounds(
+            session, forecastseries.oid,
+            datetime(2022, 1, 1), datetime(2022, 1, 31)
+        )
         assert timestep is not None
 
         # 2. Should create 2 unique GridCells (one per spatial group)
-        gridcells = session.query(GridCellTable).filter_by(
-            forecastseries_oid=forecastseries.oid
-        ).all()
+        gridcells = GridCellRepository.find_by_forecastseries(
+            session, forecastseries.oid
+        )
         assert len(gridcells) == 2, "Should create 2 spatial GridCells"
 
         # 3. ModelResults should match total rate grid entries
-        model_results = session.query(ModelResultTable).filter_by(
-            modelrun_oid=modelrun.oid,
-            result_type='GRID'
-        ).all()
-        assert len(model_results) == 4, "Should create 4 ModelResult records"
+        model_result_count = ModelResultRepository.count_by_modelrun(
+            session, modelrun.oid
+        )
+        assert model_result_count == 4, "Should create 4 ModelResult records"
 
         # 4. GRParameters should match ModelResults
-        gr_params_count = session.execute(
-            text('SELECT COUNT(*) FROM grparameters WHERE '
-                 'modelresult_oid IN (SELECT oid FROM modelresult WHERE '
-                 'modelrun_oid = :modelrun_oid)'),
-            {'modelrun_oid': modelrun.oid}
-        ).scalar()
+        gr_params_count = GRParametersRepository.count_by_modelrun(
+            session, modelrun.oid
+        )
         assert gr_params_count == 4, "Should create 4 GRParameters records"
 
         # 5. Verify data integrity - each ModelResult links to correct TimeStep
+        model_results = ModelResultRepository.get_by_modelrun(
+            session, modelrun.oid
+        )
         for result in model_results:
             assert result.timestep_oid == timestep.oid
             assert result.gridcell_oid in [gc.oid for gc in gridcells]
@@ -178,15 +173,15 @@ class TestSaveForecastGRRateGrid:
         )
 
         # Should create only 1 GridCell but 3 ModelResults
-        gridcells = session.query(GridCellTable).filter_by(
-            forecastseries_oid=forecastseries.oid
-        ).all()
+        gridcells = GridCellRepository.find_by_forecastseries(
+            session, forecastseries.oid
+        )
         assert len(gridcells) == 1, "Should create 1 GridCell"
 
-        model_results = session.query(ModelResultTable).filter_by(
-            modelrun_oid=modelrun.oid
-        ).all()
-        assert len(model_results) == 3, "Should create 3 ModelResult records"
+        model_result_count = ModelResultRepository.count_by_modelrun(
+            session, modelrun.oid
+        )
+        assert model_result_count == 3, "Should create 3 ModelResult records"
 
     def test_error_handling_invalid_grid_id(
             self, session, modelrun_with_dependencies):
@@ -229,15 +224,14 @@ class TestServiceDataIntegrity:
         )
 
         # Create second modelrun for same forecast
-        from hermes.datamodel.result_tables import ModelRunTable
         from hermes.schemas.base import EStatus
-        modelrun2 = ModelRunTable(
+        from hermes.schemas.result_schemas import ModelRun
+        modelrun2_data = ModelRun(
             modelconfig_oid=modelrun1.modelconfig_oid,
             forecast_oid=modelrun1.forecast_oid,
-            status=EStatus.PENDING.value
+            status=EStatus.PENDING
         )
-        session.add(modelrun2)
-        session.commit()
+        modelrun2 = ModelRunRepository.create(session, modelrun2_data)
 
         # Create second catalog with same temporal/spatial bounds
         catalog2 = TestDataGenerator.create_forecast_catalog(
@@ -248,21 +242,16 @@ class TestServiceDataIntegrity:
         )
 
         # Should only have 1 TimeStep and 1 GridCell (reused)
-        timesteps = session.query(TimeStepTable).filter_by(
-            forecastseries_oid=forecastseries.oid
-        ).all()
-        assert len(timesteps) == 1, "Should reuse existing TimeStep"
-
-        gridcells = session.query(GridCellTable).filter_by(
-            forecastseries_oid=forecastseries.oid
-        ).all()
+        gridcells = GridCellRepository.find_by_forecastseries(
+            session, forecastseries.oid
+        )
         assert len(gridcells) == 1, "Should reuse existing GridCell"
 
         # Should have ModelResults for both modelruns
-        results1 = session.query(ModelResultTable).filter_by(
-            modelrun_oid=modelrun1.oid
-        ).count()
-        results2 = session.query(ModelResultTable).filter_by(
-            modelrun_oid=modelrun2.oid
-        ).count()
-        assert results1 == 2 and results2 == 3
+        results1_count = ModelResultRepository.count_by_modelrun(
+            session, modelrun1.oid
+        )
+        results2_count = ModelResultRepository.count_by_modelrun(
+            session, modelrun2.oid
+        )
+        assert results1_count == 2 and results2_count == 3

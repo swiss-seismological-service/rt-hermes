@@ -50,6 +50,23 @@ class ModelResultRepository(
         batch = sorted(result, key=lambda x: x[1])
         return [x[0] for x in batch]
 
+    @classmethod
+    def count_by_modelrun(cls, session: Session, modelrun_oid: UUID) -> int:
+        """Count ModelResult records for a specific modelrun."""
+        q = select(ModelResultTable).where(
+            ModelResultTable.modelrun_oid == modelrun_oid)
+        result = session.execute(q).unique().scalars().all()
+        return len(result)
+
+    @classmethod
+    def get_by_modelrun(cls, session: Session,
+                        modelrun_oid: UUID) -> list[ModelResult]:
+        """Get all ModelResult records for a specific modelrun."""
+        q = select(ModelResultTable).where(
+            ModelResultTable.modelrun_oid == modelrun_oid)
+        result = session.execute(q).unique().scalars().all()
+        return [cls.model.model_validate(row) for row in result]
+
 
 class GridCellRepository(
     repository_factory(GridCell,
@@ -103,9 +120,30 @@ class GridCellRepository(
                     raise e
         return result
 
+    @classmethod
+    def find_by_forecastseries(cls, session: Session,
+                               forecastseries_oid: UUID) -> list[GridCell]:
+        """Find all GridCells for a forecastseries."""
+        q = select(GridCellTable).where(
+            GridCellTable.forecastseries_oid == forecastseries_oid)
+        result = session.execute(q).unique().scalars().all()
+        return [cls.model.model_validate(row) for row in result]
+
+    @classmethod
+    def find_by_spatial_bounds(cls, session: Session,
+                               forecastseries_oid: UUID,
+                               depth_min: float, depth_max: float) -> GridCell:
+        """Find GridCell by spatial bounds."""
+        q = select(GridCellTable).where(
+            GridCellTable.forecastseries_oid == forecastseries_oid,
+            GridCellTable.depth_min == depth_min,
+            GridCellTable.depth_max == depth_max)
+        result = session.execute(q).unique().scalar_one_or_none()
+        return cls.model.model_validate(result) if result else None
+
 
 class TimeStepRepository(
-    repository_factory(GridCell,
+    repository_factory(TimeStep,
                        TimeStepTable)):
     @classmethod
     def get_or_create(cls,
@@ -125,6 +163,17 @@ class TimeStepRepository(
                 if not result:
                     raise e
         return result
+
+    @classmethod
+    def find_by_bounds(cls, session: Session, forecastseries_oid: UUID,
+                       starttime, endtime) -> TimeStep:
+        """Find TimeStep by temporal bounds."""
+        q = select(TimeStepTable).where(
+            TimeStepTable.forecastseries_oid == forecastseries_oid,
+            TimeStepTable.starttime == starttime,
+            TimeStepTable.endtime == endtime)
+        result = session.execute(q).unique().scalar_one_or_none()
+        return cls.model.model_validate(result) if result else None
 
 
 class GRParametersRepository(
@@ -150,6 +199,17 @@ class GRParametersRepository(
 
         session.execute(insert(GRParametersTable), grparameters)
         session.commit()
+
+    @classmethod
+    def count_by_modelrun(cls, session: Session, modelrun_oid: UUID) -> int:
+        """Count GRParameters records for a specific modelrun."""
+        from sqlalchemy import func
+        q = (select(func.count(GRParametersTable.oid))
+             .join(ModelResultTable,
+                   GRParametersTable.modelresult_oid == ModelResultTable.oid)
+             .where(ModelResultTable.modelrun_oid == modelrun_oid))
+        result = session.execute(q).scalar()
+        return result or 0
 
 
 class EventForecastRepository(
@@ -177,6 +237,17 @@ class EventForecastRepository(
 
         session.execute(insert(EventForecastTable), events)
         session.commit()
+
+    @classmethod
+    def count_by_modelrun(cls, session: Session, modelrun_oid: UUID) -> int:
+        """Count EventForecast records for a specific modelrun."""
+        from sqlalchemy import func
+        q = (select(func.count(EventForecastTable.oid))
+             .join(ModelResultTable,
+                   EventForecastTable.modelresult_oid == ModelResultTable.oid)
+             .where(ModelResultTable.modelrun_oid == modelrun_oid))
+        result = session.execute(q).scalar()
+        return result or 0
 
 
 class ModelRunRepository(repository_factory(
