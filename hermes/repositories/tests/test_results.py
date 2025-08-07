@@ -12,7 +12,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from hermes.repositories.project import (ForecastRepository,
-                                         ForecastSeriesRepository)
+                                         ForecastSeriesRepository,
+                                         ProjectRepository)
 from hermes.repositories.results import (EventForecastRepository,
                                          GridCellRepository,
                                          GRParametersRepository,
@@ -20,10 +21,10 @@ from hermes.repositories.results import (EventForecastRepository,
                                          ModelRunRepository,
                                          TimeStepRepository)
 from hermes.schemas.base import EResultType
-from hermes.schemas.project_schemas import Forecast, ForecastSeries
 from hermes.schemas.result_schemas import (EventForecast, GridCell,
                                            GRParameters, ModelResult, ModelRun,
                                            TimeStep)
+from hermes.tests.data_factories import TestDataFactory
 
 MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'data')
@@ -64,9 +65,10 @@ class TestGridCells:
         assert cell1 == cell2
 
     def test_unique_constraint(self, session, full_scenario):
-        fs = ForecastSeries(oid=uuid.uuid4(),
-                            name='test',
-                            schedule_starttime=datetime(2021, 1, 1))
+        fs = TestDataFactory.create_forecastseries(
+            project_oid=full_scenario.project.oid,
+            name='test'
+        )
 
         poly1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
         poly2 = Polygon([(0, 0), (2, 0), (1, 1), (0, 1)])
@@ -127,9 +129,10 @@ class TestTimeStep:
         assert timestep == timestep2
 
     def test_unique_constraint(self, session, full_scenario):
-        fs = ForecastSeries(oid=uuid.uuid4(),
-                            name='test',
-                            schedule_starttime=datetime(2021, 1, 1))
+        fs = TestDataFactory.create_forecastseries(
+            project_oid=full_scenario.project.oid,
+            name='test'
+        )
 
         ts1 = TimeStep(starttime=datetime(2021, 1, 1),
                        endtime=datetime(2021, 1, 2),
@@ -154,17 +157,20 @@ class TestModelResult:
     @pytest.fixture(autouse=True)
     def _create_step_cell(self, session):
 
-        forecastseries = ForecastSeries(
-            oid=uuid.uuid4(),
-            name='test',
-            schedule_starttime=datetime(2021, 1, 1))
+        # Create a temporary project for this test fixture
+        project = TestDataFactory.create_project(name='test_project')
+        project_oid = ProjectRepository.create(session, project).oid
+
+        forecastseries = TestDataFactory.create_forecastseries(
+            project_oid=project_oid,
+            name='test'
+        )
         self.forecastseries_oid = ForecastSeriesRepository.create(
             session, forecastseries).oid
 
-        forecast = Forecast(oid=uuid.uuid4(),
-                            starttime=datetime(2021, 1, 1),
-                            endtime=datetime(2021, 1, 2),
-                            forecastseries_oid=self.forecastseries_oid)
+        forecast = TestDataFactory.create_forecast(
+            forecastseries_oid=self.forecastseries_oid
+        )
         self.forecast_oid = ForecastRepository.create(session, forecast).oid
 
         modelrun = ModelRun(oid=uuid.uuid4(),

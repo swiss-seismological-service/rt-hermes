@@ -1,7 +1,5 @@
 import json
 import os
-import uuid
-from datetime import datetime
 
 import pandas as pd
 from hydws.parser import BoreholeHydraulics
@@ -12,8 +10,9 @@ from hermes.repositories.data import (InjectionObservationRepository,
                                       InjectionPlanRepository,
                                       SeismicityObservationRepository)
 from hermes.repositories.project import (ForecastRepository,
-                                         ForecastSeriesRepository)
-from hermes.schemas.project_schemas import Forecast, ForecastSeries
+                                         ForecastSeriesRepository,
+                                         ProjectRepository)
+from hermes.tests.data_factories import TestDataFactory
 
 MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'data')
@@ -22,9 +21,19 @@ MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 class TestData:
 
     def test_create_seismicityobservation(self, session, connection):
-        forecast = Forecast(oid=uuid.uuid4(),
-                            starttime=datetime(2021, 1, 1),
-                            endtime=datetime(2021, 1, 2))
+        # Create project and forecastseries first
+        project = TestDataFactory.create_project()
+        project_oid = ProjectRepository.create(session, project).oid
+
+        forecastseries = TestDataFactory.create_forecastseries(
+            project_oid=project_oid
+        )
+        forecastseries_oid = ForecastSeriesRepository.create(
+            session, forecastseries).oid
+
+        forecast = TestDataFactory.create_forecast(
+            forecastseries_oid=forecastseries_oid
+        )
 
         forecast_oid = ForecastRepository.create(session, forecast).oid
 
@@ -54,9 +63,19 @@ class TestData:
         assert obs_db.data.decode('utf-8')
 
     def test_create_injectionobservation(self, session, connection):
-        forecast = Forecast(oid=uuid.uuid4(),
-                            starttime=datetime(2021, 1, 1),
-                            endtime=datetime(2021, 1, 2))
+        # Create project and forecastseries first
+        project = TestDataFactory.create_project()
+        project_oid = ProjectRepository.create(session, project).oid
+
+        forecastseries = TestDataFactory.create_forecastseries(
+            project_oid=project_oid
+        )
+        forecastseries_oid = ForecastSeriesRepository.create(
+            session, forecastseries).oid
+
+        forecast = TestDataFactory.create_forecast(
+            forecastseries_oid=forecastseries_oid
+        )
 
         forecast_oid = ForecastRepository.create(session, forecast).oid
 
@@ -87,8 +106,14 @@ class TestData:
         ).scalar() == 1
 
     def test_create_injectionplan(self, session, connection):
-        forecastseries = ForecastSeries(oid=uuid.uuid4(),
-                                        name='test_series',)
+        # Create project first
+        project = TestDataFactory.create_project()
+        project_oid = ProjectRepository.create(session, project).oid
+
+        forecastseries = TestDataFactory.create_forecastseries(
+            project_oid=project_oid,
+            name='test_series'
+        )
 
         forecastseries_oid = ForecastSeriesRepository.create(
             session, forecastseries).oid
