@@ -4,12 +4,9 @@ Shared pytest fixtures for all test layers.
 This conftest.py is at the package root and provides fixtures that are
 automatically discoverable by all test directories in the hermes package.
 """
-from datetime import datetime
-
 import pytest
 from prefect.logging import disable_run_logger
 from prefect.testing.utilities import prefect_test_harness
-from shapely import Polygon
 from sqlalchemy import Connection, event, text
 from sqlalchemy.engine import URL
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -18,12 +15,6 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from hermes.config import get_settings
 from hermes.datamodel.base import ORMBase
 from hermes.repositories.database import create_engine, create_extensions
-from hermes.repositories.project import (ForecastRepository,
-                                         ForecastSeriesRepository,
-                                         ModelConfigRepository,
-                                         ProjectRepository)
-from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
-                            ForecastSeries, ModelConfig, Project)
 from hermes.tests.data_factories import TestScenarioBuilder
 
 settings = get_settings()
@@ -116,7 +107,7 @@ def session(connection, request: pytest.FixtureRequest):
 
     # Restart savepoint after each commit
     @event.listens_for(session, "after_transaction_end")
-    def restart_savepoint(db_session, transaction):
+    def restart_savepoint(session_obj, transaction):  # noqa: F841
         if transaction.nested and not transaction._parent.nested:
             session.expire_all()
             session.begin_nested()
@@ -130,86 +121,16 @@ def session(connection, request: pytest.FixtureRequest):
     return session
 
 
-@pytest.fixture()
-def project(session) -> Project:
-    """Create a test project with standard defaults."""
-    project = Project(
-        name='test_project',
-        description='test_description',
-        starttime=datetime(2024, 1, 1, 0, 0, 0),
-        endtime=datetime(2024, 2, 1, 0, 0, 0)
-    )
-
-    project = ProjectRepository.create(session, project)
-
-    return project
-
-
-@pytest.fixture()
-def forecastseries(session, project):
-    """Create a test forecastseries with standard defaults."""
-    forecastseries = ForecastSeries(
-        name='test_forecastseries',
-        schedule_starttime=datetime(2021, 1, 2, 0, 0, 0),
-        forecast_endtime=datetime(2025, 1, 4, 0, 0, 0),
-        observation_starttime=datetime(2021, 1, 1, 0, 0, 0),
-        project_oid=project.oid,
-        status=EStatus.PENDING,
-        schedule_interval=1800,
-        bounding_polygon=Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)]),
-        depth_min=0,
-        depth_max=1,
-        tags=['tag1', 'tag2'],
-        seismicityobservation_required=EInput.REQUIRED,
-        injectionobservation_required=EInput.NOT_ALLOWED,
-        injectionplan_required=EInput.NOT_ALLOWED,
-        fdsnws_url='https://'
-    )
-
-    forecastseries = ForecastSeriesRepository.create(session, forecastseries)
-
-    return forecastseries
-
-
-@pytest.fixture()
-def forecast(session, forecastseries):
-    """Create a test forecast with standard defaults."""
-    forecast = Forecast(
-        forecastseries_oid=forecastseries.oid,
-        status=EStatus.PENDING,
-        starttime=datetime(2021, 1, 2, 0, 30, 0),
-        endtime=datetime(2021, 1, 4, 0, 0, 0),
-    )
-
-    forecast = ForecastRepository.create(session, forecast)
-
-    return forecast
-
-
-@pytest.fixture()
-def model_config(session):
-    """Create a test model configuration with standard defaults."""
-    model_config = ModelConfig(
-        name='test_model',
-        description='test_description',
-        tags=['tag1', 'tag3'],
-        result_type=EResultType.CATALOG,
-        enabled=True,
-        sfm_module='hermes.tests.model_mock',
-        sfm_function='model_mock',
-        model_parameters={'setting1': 'value1',
-                          'setting2': 'value2'}
-    )
-    model_config = ModelConfigRepository.create(session, model_config)
-    return model_config
-
-
 # Scenario Fixtures for Complex Test Scenarios
 
 @pytest.fixture()
 def full_scenario(session):
     """Complete test scenario: project → series → forecast → modelrun."""
-    return TestScenarioBuilder.create_full_modelrun_scenario(session)
+    return TestScenarioBuilder.create_full_modelrun_scenario(
+        session,
+        forecastseries={'tags': ['tag1', 'tag2']},
+        model_config={'tags': ['tag1', 'tag3']}
+    )
 
 
 @pytest.fixture()

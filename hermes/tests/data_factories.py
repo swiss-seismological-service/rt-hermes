@@ -1,11 +1,5 @@
-"""
-Consolidated test data generation for all test layers.
-
-This module provides a clean hierarchy for test data creation:
-- TestDataFactory: Creates simple domain objects (schemas)
-- TestDataGenerator: Creates complex data structures
-- TestScenarioBuilder: Creates complete test scenarios with dependencies
-"""
+import os
+import pickle
 import uuid
 from datetime import datetime, timedelta
 from typing import Optional
@@ -15,6 +9,11 @@ import pandas as pd
 from seismostats import ForecastCatalog
 from shapely import Polygon
 
+from hermes.datamodel.result_tables import ModelRunTable
+from hermes.repositories.project import (ForecastRepository,
+                                         ForecastSeriesRepository,
+                                         ModelConfigRepository,
+                                         ProjectRepository)
 from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
                             ForecastSeries, ModelConfig, Project)
 
@@ -137,102 +136,56 @@ class TestDataGenerator:
     @staticmethod
     def create_forecast_catalog(
         n_catalogs: int = 10,
-        n_events_per_catalog: int = 50,
         **kwargs
     ) -> ForecastCatalog:
-        """Create a ForecastCatalog for testing model results."""
-        # Create events for all catalogs combined, with catalog_id
-        catalog_data = []
-        for catalog_id in range(n_catalogs):
-            for event_id in range(n_events_per_catalog):
-                starttime = kwargs.get('starttime', datetime(2022, 1, 1))
-                endtime = kwargs.get('endtime', starttime + timedelta(days=30))
-                bounding_polygon = kwargs.get('bounding_polygon', Polygon([
-                    (5.95, 45.82), (10.49, 45.82),
-                    (10.49, 47.81), (5.95, 47.81), (5.95, 45.82)
-                ]))
+        """Load ForecastCatalog from test data file."""
 
-                bounds = bounding_polygon.bounds
-                total_events = n_catalogs * n_events_per_catalog
-                event_index = catalog_id * n_events_per_catalog + event_id
-                time_fraction = event_index / total_events
-                event_time = starttime + (endtime - starttime) * time_fraction
+        catalog_path = os.path.join(
+            os.path.dirname(__file__),
+            '../repositories/tests/data/catalog.parquet.gzip'
+        )
 
-                catalog_data.append({
-                    'time': event_time,
-                    'longitude': np.random.uniform(bounds[0], bounds[2]),
-                    'latitude': np.random.uniform(bounds[1], bounds[3]),
-                    'depth': np.random.uniform(
-                        kwargs.get('depth_min', 0),
-                        kwargs.get('depth_max', 10)
-                    ),
-                    'magnitude': np.random.uniform(1.0, 4.0),
-                    'magnitude_type': 'ML',
-                    'event_id': f'catalog_{catalog_id}_event_{event_id}',
-                    'catalog_id': catalog_id
-                })
+        catalog = ForecastCatalog(pd.read_parquet(catalog_path))
 
-        combined_df = pd.DataFrame(catalog_data)
-        forecast_catalog = ForecastCatalog(combined_df, n_catalogs=n_catalogs)
+        # Set required attributes with defaults
+        catalog.starttime = kwargs.get('starttime', datetime(2022, 1, 1))
+        catalog.endtime = kwargs.get('endtime', datetime(2022, 1, 31))
+        catalog.bounding_polygon = kwargs.get('bounding_polygon', Polygon([
+            (5.95, 45.82), (10.49, 45.82),
+            (10.49, 47.81), (5.95, 47.81), (5.95, 45.82)
+        ]))
+        catalog.depth_min = kwargs.get('depth_min', 0)
+        catalog.depth_max = kwargs.get('depth_max', 10)
+        catalog.n_catalogs = n_catalogs
 
-        # Set required attributes
-        forecast_catalog.starttime = kwargs.get(
-            'starttime', datetime(2022, 1, 1))
-        default_endtime = forecast_catalog.starttime + timedelta(days=30)
-        forecast_catalog.endtime = kwargs.get('endtime', default_endtime)
-        forecast_catalog.bounding_polygon = kwargs.get(
-            'bounding_polygon', Polygon([
-                (5.95, 45.82), (10.49, 45.82),
-                (10.49, 47.81), (5.95, 47.81), (5.95, 45.82)
-            ]))
-        forecast_catalog.depth_min = kwargs.get('depth_min', 0)
-        forecast_catalog.depth_max = kwargs.get('depth_max', 10)
+        # Add catalog_id column if not present (needed by service)
+        if 'catalog_id' not in catalog.columns:
+            catalog['catalog_id'] = np.random.randint(
+                0, n_catalogs, catalog.shape[0])
 
-        return forecast_catalog
+        return catalog
 
     @staticmethod
     def create_rate_grid(
-        n_cells: int = 2,
-        entries_per_cell: int = 2,
         **kwargs
     ) -> pd.DataFrame:
-        """Create a GR rate grid DataFrame for testing."""
-        rategrid_data = {
-            'longitude_min': [],
-            'longitude_max': [],
-            'latitude_min': [],
-            'latitude_max': [],
-            'depth_min': [],
-            'depth_max': [],
-            'grid_id': [],
-            'b_value': [],
-            'a_value': [],
-            'magnitude_max': []
-        }
+        """Load forecast rate grid from test data file."""
+        rategrid_path = os.path.join(
+            os.path.dirname(__file__),
+            '../repositories/tests/data/forecastgrrategrid.pkl'
+        )
 
-        for cell_id in range(n_cells):
-            # Create spatial bounds for this cell
-            lon_min = 5.0 + cell_id
-            lon_max = lon_min + 1.0
-            lat_min = 45.0 + cell_id
-            lat_max = lat_min + 1.0
+        with open(rategrid_path, 'rb') as f:
+            data = pickle.load(f)
 
-            for entry_id in range(entries_per_cell):
-                rategrid_data['longitude_min'].append(lon_min)
-                rategrid_data['longitude_max'].append(lon_max)
-                rategrid_data['latitude_min'].append(lat_min)
-                rategrid_data['latitude_max'].append(lat_max)
-                rategrid_data['depth_min'].append(kwargs.get('depth_min', 0))
-                rategrid_data['depth_max'].append(kwargs.get('depth_max', 10))
-                # 0-indexed within each spatial cell
-                rategrid_data['grid_id'].append(entry_id)
-                rategrid_data['b_value'].append(1.0 + entry_id * 0.1)
-                rategrid_data['a_value'].append(2.0 + entry_id * 0.1)
-                rategrid_data['magnitude_max'].append(5.0 + entry_id * 0.1)
+        # The pickle file contains a list of rate grids, take the last one
+        rategrid = data[-1]
 
-        rategrid = pd.DataFrame(rategrid_data)
-        rategrid.starttime = kwargs.get('starttime', datetime(2022, 1, 1))
-        rategrid.endtime = kwargs.get('endtime', datetime(2022, 1, 31))
+        # Apply customizations from kwargs if provided
+        if 'starttime' in kwargs:
+            rategrid.starttime = kwargs['starttime']
+        if 'endtime' in kwargs:
+            rategrid.endtime = kwargs['endtime']
 
         return rategrid
 
@@ -243,12 +196,6 @@ class TestScenarioBuilder:
     @staticmethod
     def create_full_modelrun_scenario(session, **kwargs):
         """Create complete scenario: project → series → forecast → modelrun."""
-        from hermes.repositories.project import (ForecastRepository,
-                                                 ForecastSeriesRepository,
-                                                 ModelConfigRepository,
-                                                 ProjectRepository)
-        from hermes.datamodel.result_tables import ModelRunTable
-
         # Create project
         project = TestDataFactory.create_project(**kwargs.get('project', {}))
         project = ProjectRepository.create(session, project)

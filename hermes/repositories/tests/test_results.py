@@ -30,40 +30,40 @@ MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 class TestGridCells:
-    def test_create(self, session, forecastseries):
+    def test_create(self, session, full_scenario):
         cell1 = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=forecastseries.oid)
+                         forecastseries_oid=full_scenario.forecastseries.oid)
         cell1 = GridCellRepository.create(session, cell1)
         assert cell1.oid is not None
 
-    def test_get_or_create(self, session, forecastseries):
+    def test_get_or_create(self, session, full_scenario):
         cell1 = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=forecastseries.oid)
+                         forecastseries_oid=full_scenario.forecastseries.oid)
         cell1 = GridCellRepository.get_or_create(session, cell1)
         assert cell1.oid is not None
 
         cell2 = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=forecastseries.oid)
+                         forecastseries_oid=full_scenario.forecastseries.oid)
         cell2 = GridCellRepository.get_or_create(session, cell2)
         assert cell1.oid == cell2.oid
 
-    def test_get_by_id(self, session, forecastseries):
+    def test_get_by_id(self, session, full_scenario):
         cell1 = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=forecastseries.oid)
+                         forecastseries_oid=full_scenario.forecastseries.oid)
         cell1 = GridCellRepository.create(session, cell1)
 
         cell2 = GridCellRepository.get_by_id(session, cell1.oid)
         assert cell1 == cell2
 
-    def test_unique_constraint(self, session, forecastseries):
+    def test_unique_constraint(self, session, full_scenario):
         fs = ForecastSeries(oid=uuid.uuid4(),
                             name='test',
                             schedule_starttime=datetime(2021, 1, 1))
@@ -74,7 +74,7 @@ class TestGridCells:
         cell1 = GridCell(geom=poly1,
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=forecastseries.oid)
+                         forecastseries_oid=full_scenario.forecastseries.oid)
 
         cell2 = cell1.model_copy(update={'geom': poly2})
         cell3 = cell1.model_copy(update={'depth_max': 20})
@@ -93,43 +93,47 @@ class TestGridCells:
 
 
 class TestTimeStep:
-    def test_create(self, session, forecastseries):
-        timestep = TimeStep(starttime=datetime(2021, 1, 1),
-                            endtime=datetime(2021, 1, 2),
-                            forecastseries_oid=forecastseries.oid)
+    def test_create(self, session, full_scenario):
+        timestep = TimeStep(
+            starttime=datetime(2021, 1, 1),
+            endtime=datetime(2021, 1, 2),
+            forecastseries_oid=full_scenario.forecastseries.oid)
         timestep = TimeStepRepository.create(session, timestep)
         assert timestep.oid is not None
 
-    def test_get_or_create(self, session, forecastseries):
-        timestep = TimeStep(starttime=datetime(2021, 1, 1),
-                            endtime=datetime(2021, 1, 2),
-                            forecastseries_oid=forecastseries.oid)
+    def test_get_or_create(self, session, full_scenario):
+        timestep = TimeStep(
+            starttime=datetime(2021, 1, 1),
+            endtime=datetime(2021, 1, 2),
+            forecastseries_oid=full_scenario.forecastseries.oid)
         timestep = TimeStepRepository.get_or_create(session, timestep)
         assert timestep.oid is not None
 
-        timestep2 = TimeStep(starttime=datetime(2021, 1, 1),
-                             endtime=datetime(2021, 1, 2),
-                             forecastseries_oid=forecastseries.oid)
+        timestep2 = TimeStep(
+            starttime=datetime(2021, 1, 1),
+            endtime=datetime(2021, 1, 2),
+            forecastseries_oid=full_scenario.forecastseries.oid)
         timestep2 = TimeStepRepository.get_or_create(session, timestep2)
         assert timestep.oid == timestep2.oid
 
-    def test_get_by_id(self, session, forecastseries):
-        timestep = TimeStep(starttime=datetime(2021, 1, 1),
-                            endtime=datetime(2021, 1, 2),
-                            forecastseries_oid=forecastseries.oid)
+    def test_get_by_id(self, session, full_scenario):
+        timestep = TimeStep(
+            starttime=datetime(2021, 1, 1),
+            endtime=datetime(2021, 1, 2),
+            forecastseries_oid=full_scenario.forecastseries.oid)
         timestep = TimeStepRepository.create(session, timestep)
 
         timestep2 = TimeStepRepository.get_by_id(session, timestep.oid)
         assert timestep == timestep2
 
-    def test_unique_constraint(self, session, forecastseries):
+    def test_unique_constraint(self, session, full_scenario):
         fs = ForecastSeries(oid=uuid.uuid4(),
                             name='test',
                             schedule_starttime=datetime(2021, 1, 1))
 
         ts1 = TimeStep(starttime=datetime(2021, 1, 1),
                        endtime=datetime(2021, 1, 2),
-                       forecastseries_oid=forecastseries.oid)
+                       forecastseries_oid=full_scenario.forecastseries.oid)
 
         ts2 = ts1.model_copy(update={'starttime': datetime(2021, 1, 3)})
         ts3 = ts1.model_copy(update={'endtime': datetime(2021, 1, 3)})

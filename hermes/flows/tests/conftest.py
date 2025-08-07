@@ -9,9 +9,9 @@ from hermes.repositories.project import (ForecastSeriesRepository,
                                          ModelConfigRepository,
                                          ProjectRepository)
 # Database fixtures now available from package root conftest.py
-from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
-                            ForecastSeries, ModelConfig, Project)
+from hermes.schemas import (EInput, EResultType, EStatus, Project)
 from hermes.schemas.data_schemas import InjectionPlan
+from hermes.tests.data_factories import TestDataFactory
 
 
 # Database fixtures auto-discovered from package root hermes/conftest.py
@@ -20,7 +20,7 @@ from hermes.schemas.data_schemas import InjectionPlan
 
 @pytest.fixture()
 def project_db(session) -> Project:
-    project = Project(
+    project = TestDataFactory.create_project(
         name='test_project',
         description='test_description',
         starttime=datetime(2022, 4, 21, 0, 0, 0),
@@ -34,9 +34,9 @@ def project_db(session) -> Project:
 
 @pytest.fixture()
 def forecastseries_db(session, project_db):
-    forecastseries = ForecastSeries(
-        name='test_forecastseries',
+    forecastseries = TestDataFactory.create_forecastseries(
         project_oid=project_db.oid,
+        name='test_forecastseries',
         observation_starttime=datetime(2022, 4, 21, 14, 45, 0),
         bounding_polygon=Polygon(
             [(-125, 35), (-115, 35), (-115, 40), (-125, 40), (-125, 35)]),
@@ -69,7 +69,7 @@ def forecastseries_db(session, project_db):
 
 @pytest.fixture()
 def modelconfig_db(session):
-    model_config = ModelConfig(
+    model_config = TestDataFactory.create_model_config(
         name='test_model',
         description='test_description',
         tags=['test'],
@@ -121,11 +121,12 @@ def injectionplan_db(session, forecastseries_db):
 
 @pytest.fixture()
 def forecast(forecastseries_db):
-    forecast = Forecast(
-        oid=uuid.uuid4(),
+    forecast = TestDataFactory.create_forecast(
         forecastseries_oid=forecastseries_db.oid,
         status=EStatus.PENDING,
         starttime=datetime(2021, 1, 2, 0, 30, 0),
         endtime=datetime(2021, 1, 4, 0, 0, 0),
     )
+    # Keep the oid assignment as it was in the original
+    forecast.oid = uuid.uuid4()
     return forecast
