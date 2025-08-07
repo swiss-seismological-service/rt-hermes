@@ -12,10 +12,7 @@ from hermes.io.tests.test_seismicity import MODULE_LOCATION
 
 class TestGRRategrid:
     def test_rategrid_serialization(self):
-        rategrid_path = os.path.join(
-            MODULE_LOCATION,
-            '../../../repositories/tests/data',
-            'forecastgrrategrid.pkl')
+        rategrid_path = os.path.join(MODULE_LOCATION, 'forecastgrrategrid.pkl')
         with open(rategrid_path, 'rb') as f:
             data = pickle.load(f)
 
