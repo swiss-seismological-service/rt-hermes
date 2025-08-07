@@ -1,16 +1,8 @@
-import os
-from datetime import datetime, timedelta
 from unittest.mock import MagicMock, call, patch
 
-import numpy as np
-from shapely import Polygon
-
 from hermes.flows.modelrun_handler import DefaultModelRunHandler
-from hermes.schemas import DBModelRunInfo, ModelConfig
+from hermes.schemas import DBModelRunInfo
 from hermes.schemas.base import EStatus
-
-MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'data')
 
 
 def mock_function(results):
@@ -33,21 +25,22 @@ class TestModelRunner:
                  mock_modelrun_repo_update_status: MagicMock,
                  mock_handler_catalog_save: MagicMock,
                  # FIXTURES
-                 modelconfig_db: ModelConfig,
+                 flows_scenario,
                  prefect
                  ):
 
         modelrun_info = DBModelRunInfo(
-            forecast_start=datetime(2022, 1, 1),
-            forecast_end=datetime(2022, 1, 1) + timedelta(days=30),
-            bounding_polygon=Polygon(
-                np.load(os.path.join(MODULE_LOCATION, 'ch_rect.npy'))),
-            depth_min=0,
-            depth_max=1)
+            forecast_start=flows_scenario.forecast.starttime,
+            forecast_end=flows_scenario.forecast.endtime,
+            bounding_polygon=flows_scenario.forecastseries.bounding_polygon,
+            depth_min=flows_scenario.forecastseries.depth_min,
+            depth_max=flows_scenario.forecastseries.depth_max
+        )
 
         mock_model_call.return_value = "teststring"
 
-        handler = DefaultModelRunHandler(modelrun_info, modelconfig_db)
+        handler = DefaultModelRunHandler(
+            modelrun_info, flows_scenario.model_config)
         handler.run()
 
         assert call(handler.model_input.model_dump()) == \

@@ -4,15 +4,15 @@ from unittest.mock import MagicMock, patch
 
 from prefect import flow
 
-from hermes.flows.forecast_handler import (ForecastHandler, InjectionPlan,
-                                           ModelConfig)
-from hermes.schemas import ForecastSeries
+from hermes.flows.forecast_handler import ForecastHandler
 
-MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'data')
-with open(os.path.join(MODULE_LOCATION, 'injection.json')) as f:
+CENTRAL_DATA_LOCATION = os.path.join(
+    os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))),
+    'tests', 'data')
+with open(os.path.join(CENTRAL_DATA_LOCATION, 'injection.json')) as f:
     INJECTION = f.read()
-with open(os.path.join(MODULE_LOCATION, 'quakeml.xml')) as f:
+with open(os.path.join(CENTRAL_DATA_LOCATION, 'quakeml.xml')) as f:
     SEISMICITY = f.read()
 
 
@@ -33,9 +33,7 @@ class TestForecastHandler:
                   mock_default_model_runner: MagicMock,
                   # FIXTURES
                   session,
-                  forecastseries_db: ForecastSeries,
-                  modelconfig_db: ModelConfig,
-                  injectionplan_db: InjectionPlan,
+                  flows_scenario_with_injection,
                   prefect
                   ):
         forecast_handler_session.return_value.__enter__.return_value = session
@@ -43,7 +41,7 @@ class TestForecastHandler:
         mock_get_injection().get_json.return_value = INJECTION
 
         forecast_handler = ForecastHandler(
-            forecastseries_db.oid,
+            flows_scenario_with_injection.forecastseries.oid,
             starttime=datetime(2022, 4, 21, 14, 50, 0),
             endtime=datetime(2022, 4, 21, 14, 55, 0)
         )
