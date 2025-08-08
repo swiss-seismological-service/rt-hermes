@@ -2,9 +2,12 @@ import os
 from datetime import datetime
 from unittest.mock import patch
 
-from sqlalchemy import text
+from sqlalchemy import func, select
 
+from hermes.datamodel.result_tables import EventForecastTable
 from hermes.flows.forecast_handler import forecast_runner
+from hermes.repositories.results import ModelResultRepository
+from hermes.schemas import EInput
 
 MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'data')
@@ -31,8 +34,6 @@ class TestDefaultModelRun:
         project = ProjectRepository.create(session, project)
 
         # Create forecastseries with specific configuration for this test
-        from hermes.schemas import EInput
-
         forecastseries = TestDataFactory.create_forecastseries(
             project_oid=project.oid,
             name='test_forecastseries',
@@ -61,10 +62,12 @@ class TestDefaultModelRun:
         forecast_runner(forecastseries.oid,
                         starttime=datetime(2022, 1, 1, 0, 0, 0))
 
-        n_modelresult = session.execute(
-            text('SELECT COUNT(*) FROM modelresult'))
-        assert n_modelresult.scalar() == 100
+        # Count ModelResults using repository method
+        model_results = ModelResultRepository.get_all(session)
+        assert len(model_results) == 100
 
-        n_eventforecasts = session.execute(
-            text('SELECT COUNT(*) FROM eventforecast'))
-        assert n_eventforecasts.scalar() == 344
+        # Count EventForecasts using a simple count query
+        event_forecast_count = session.execute(
+            select(func.count(EventForecastTable.oid))
+        ).scalar()
+        assert event_forecast_count == 344
