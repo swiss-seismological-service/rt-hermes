@@ -70,7 +70,7 @@ class ForecastSeriesRepository(repository_factory(
             -> list[ForecastSeries]:
         q = select(ForecastSeriesTable).where(
             ForecastSeriesTable.project_oid == project_oid)
-        result = session.execute(q).scalars().all()
+        result = session.execute(q).unique().scalars().all()
         return [cls.model.model_validate(f) for f in result]
 
     @classmethod

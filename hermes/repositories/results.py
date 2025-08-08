@@ -273,7 +273,7 @@ class ModelRunRepository(repository_factory(
                            modelconfig_oid: UUID) -> ModelRun:
         q = select(ModelRunTable).where(
             ModelRunTable.modelconfig_oid == modelconfig_oid)
-        result = session.execute(q).unique().all()
+        result = session.execute(q).unique().scalars().all()
         return [cls.model.model_validate(r) for r in result]
 
     @classmethod
@@ -282,5 +282,5 @@ class ModelRunRepository(repository_factory(
                              injectionplan_oid: UUID) -> ModelRun:
         q = select(ModelRunTable).where(
             ModelRunTable.injectionplan_oid == injectionplan_oid)
-        result = session.execute(q).unique().all()
+        result = session.execute(q).unique().scalars().all()
         return [cls.model.model_validate(r) for r in result]
