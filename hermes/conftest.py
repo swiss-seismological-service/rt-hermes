@@ -20,66 +20,62 @@ from hermes.tests.data_factories import TestScenarioBuilder
 settings = get_settings()
 
 
-def delete_database(connection: Connection, db_name: str):
-    """Helper to clean up test database."""
-    connection.execute(text("ROLLBACK"))
-    try:
-        connection.execute(text(f"DROP DATABASE {db_name}"))
-    except ProgrammingError:
-        # Probably the database does not exist, as it should be.
-        connection.execute(text("ROLLBACK"))
-    except OperationalError:
-        print(
-            "Could not drop database because it's "
-            "being accessed by other users (psql prompt open?)")
-        connection.execute(text("ROLLBACK"))
-
-
-@pytest.fixture(scope="class")
-def connection(request: pytest.FixtureRequest) -> object:
-    """Create a test database connection for all layers."""
-    test_db_name = f"{settings.POSTGRES_DB}_test"
-
+def create_test_engine(db_name: str = None):
+    """Create database engine for testing."""
     url = URL.create(
         drivername='postgresql+psycopg2',
         username=settings.POSTGRES_USER,
         password=settings.POSTGRES_PASSWORD,
         host=settings.POSTGRES_HOST,
-        port=settings.POSTGRES_PORT
+        port=settings.POSTGRES_PORT,
+        database=db_name
     )
+    return create_engine(url)
 
-    engine = create_engine(url)
 
-    with engine.connect() as connection:
-        connection.execution_options(isolation_level="AUTOCOMMIT")
+def delete_database(connection: Connection, db_name: str):
+    """Helper to clean up test database."""
+    try:
+        connection.execute(text(f"DROP DATABASE {db_name}"))
+    except (ProgrammingError, OperationalError):
+        # Database doesn't exist or is in use - ignore silently
+        pass
 
-        delete_database(connection, test_db_name)
 
-        connection.execute(text(
-            f"CREATE DATABASE {test_db_name};"
-        ))
+@pytest.fixture(scope="session")
+def connection(request: pytest.FixtureRequest) -> Connection:
+    """Create a test database connection for all test sessions."""
+    test_db_name = f"{settings.POSTGRES_DB}_test"
 
-    engine = create_engine(
-        f"{url.render_as_string(False)}/{test_db_name}"
-    )
-    create_extensions(engine)
-    connection = engine.connect()
+    # Create/recreate test database
+    engine = create_test_engine()
+    with engine.connect() as conn:
+        conn.execution_options(isolation_level="AUTOCOMMIT")
+        delete_database(conn, test_db_name)
+        conn.execute(text(f"CREATE DATABASE {test_db_name}"))
+    engine.dispose()
+
+    # Connect to test database with extensions
+    test_engine = create_test_engine(test_db_name)
+    create_extensions(test_engine)
+    connection = test_engine.connect()
 
     def teardown():
         connection.close()
-        engine.dispose()
-
-        db_engine = create_engine(url)
-        with db_engine.connect() as conn:
+        test_engine.dispose()
+        # Clean up test database
+        cleanup_engine = create_test_engine()
+        with cleanup_engine.connect() as conn:
             conn.execution_options(isolation_level="AUTOCOMMIT")
-            conn.execute(text(f"DROP DATABASE {test_db_name};"))
+            delete_database(conn, test_db_name)
+        cleanup_engine.dispose()
 
     request.addfinalizer(teardown)
     return connection
 
 
-@pytest.fixture(scope="class", autouse=True)
-def setup_db(connection, request: pytest.FixtureRequest) -> None:
+@pytest.fixture(scope="session", autouse=True)
+def setup_db(connection: Connection, request: pytest.FixtureRequest):
     """Setup test database tables.
 
     Creates all database tables as declared in SQLAlchemy models,
@@ -93,11 +89,9 @@ def setup_db(connection, request: pytest.FixtureRequest) -> None:
 
     request.addfinalizer(teardown)
 
-    return None
-
 
 @pytest.fixture(autouse=True)
-def session(connection, request: pytest.FixtureRequest):
+def session(connection: Connection, request: pytest.FixtureRequest):
     """Create database session with transaction rollback for test isolation."""
     transaction = connection.begin()
     session = scoped_session(sessionmaker(
@@ -107,7 +101,7 @@ def session(connection, request: pytest.FixtureRequest):
 
     # Restart savepoint after each commit
     @event.listens_for(session, "after_transaction_end")
-    def restart_savepoint(session_obj, transaction):  # noqa: F841
+    def restart_savepoint(_, transaction):
         if transaction.nested and not transaction._parent.nested:
             session.expire_all()
             session.begin_nested()
