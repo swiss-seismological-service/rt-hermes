@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim AS builder
 
 LABEL maintainer="Nicolas Schmid <nicolas.schmid@sed.ethz.ch>"
 
@@ -30,7 +30,7 @@ RUN pip freeze > requirements.txt
 
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /web/wheels -r requirements.txt
 
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim
 
 WORKDIR /app
 
