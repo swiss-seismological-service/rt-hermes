@@ -41,12 +41,13 @@ cp .env.example .env
 As a quick test setup, the configuration works as is, but is not secure. Please change the credentials, ports and connection strings in the .env file.
 
 #### 2.1.4 Create the Docker services
-You can now create the Docker services for the Prefect Server and the PostgreSQL database using the following commands:
+You can now create the Docker services for the Prefect Server and the PostgreSQL database using the following command:
 ```
-docker compose -f compose-prefect.yaml up -d
-docker compose --env-file .env -f compose-database.yaml up -d
+docker compose --env-file .env -f compose-prefect.yaml -f compose-database.yaml up -d
 ```
 You can now access the Prefect Server at [http://localhost:4200](http://localhost:4200) and the webservice at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+**Note:** Using multiple `-f` flags ensures both services share the same Docker network for proper inter-service communication.
 
 
 ### 2.2 Install HERMES
@@ -188,16 +189,11 @@ A documentation is available [here](https://github.com/swiss-seismological-servi
 
 ## 4 Update
 ### 4.1 Update the services
-Inside the cloned repository folder, update the prefect docker containers:
+Inside the cloned repository folder, update the docker containers:
 
 ```bash
-docker compose -f compose-prefect.yaml up -d
+docker compose --env-file .env -f compose-prefect.yaml -f compose-database.yaml up -d
 prefect server database upgrade -y
-```
-
-Next you can update the hermes database and webservice:
-```bash
-docker compose -f compose-database.yaml up -d
 hermes db upgrade
 ```
 
@@ -218,15 +214,9 @@ hermes db upgrade
 If you want to update the services and would like a clean install or/and don't care about the existing data, you can do so by completely removing the existing containers and volumes, pulling the latest changes, and then starting the services again.
 
 ```bash
-docker compose -f src/hermes/compose-prefect.yaml down -v
-docker compose -f src/hermes/compose-prefect.yaml pull
-docker compose -f src/hermes/compose-prefect.yaml up -d
-```
-
-Next you can update the hermes database and webservice:
-```bash
-docker compose -f src/hermes/compose-database.yaml down -v
-docker compose -f src/hermes/compose-database.yaml pull
-docker compose --env-file .env -f src/hermes/compose-database.yaml up -d
+docker compose --env-file .env -f compose-prefect.yaml -f compose-database.yaml down -v
+docker compose -f compose-prefect.yaml pull
+docker compose -f compose-database.yaml pull
+docker compose --env-file .env -f compose-prefect.yaml -f compose-database.yaml up -d
 ```
 

@@ -1,16 +1,14 @@
 services:
-    prefect-server:
-        image: prefecthq/prefect:3.4.3-python3.12
-        environment:
-            - PREFECT_SERVER_API_HOST=0.0.0.0
-            - PREFECT_UI_API_URL=${PREFECT_API_URL:-http://localhost:4200/api}
-            - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:${PREFECT_PASSWORD:-prefect}@prefect-postgres:5432/prefect
+    redis:
+        image: redis:7
         restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
-        ports:
-            - 4200:4200
-        depends_on:
-            - prefect-postgres
-        command: prefect server start
+        volumes:
+            - redis_data:/data
+        healthcheck:
+            test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
         networks:
             - hermesnet
 
@@ -25,10 +23,46 @@ services:
             - ${PREFECT_PORT:-5433}:5432
         volumes:
             - prefectdb:/var/lib/postgresql/data
+            - ./hermes/datamodel/alembic/init-prefect-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            - hermesnet
+
+    prefect-server:
+        image: prefecthq/prefect:3.4.3-python3.12
+        environment:
+            - PREFECT_SERVER_API_HOST=0.0.0.0
+            - PREFECT_UI_API_URL=${PREFECT_API_URL:-http://localhost:4200/api}
+            - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://postgres:${PREFECT_PASSWORD:-prefect}@prefect-postgres:5432/prefect
+            - PREFECT_MESSAGING_BROKER=prefect_redis.messaging
+            - PREFECT_MESSAGING_CACHE=prefect_redis.messaging
+            - PREFECT_REDIS_MESSAGING_HOST=redis
+            - PREFECT_REDIS_MESSAGING_PORT=6379
+            - PREFECT_REDIS_MESSAGING_DB=0
+        restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+        ports:
+            - 4200:4200
+        depends_on:
+            prefect-postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        command: prefect server start
+        healthcheck:
+            test: ["CMD-SHELL", "curl -f http://localhost:4200/api/health || exit 1"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
         networks:
             - hermesnet
 
 volumes:
     prefectdb: {}
+    redis_data: {}
 networks:
     hermesnet: {}

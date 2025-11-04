@@ -14,13 +14,18 @@ RUN apt-get update \
     && apt-get clean
 
 # Install build backend requirements
-RUN pip install setuptools wheel
+RUN pip install --no-cache-dir setuptools wheel
 
+# Copy requirements first for better caching
+COPY requirements-web.txt pyproject.toml setup.py ./
+
+# Install dependencies in single layer
+RUN pip install --no-cache-dir --upgrade pip wheel setuptools && \
+    pip install --no-cache-dir . && \
+    pip install --no-cache-dir -r requirements-web.txt
+
+# Copy source code after dependencies
 COPY . .
-
-RUN pip install --no-cache-dir --upgrade pip wheel setuptools
-RUN pip install --no-cache-dir .
-RUN pip install --no-cache-dir -r requirements-web.txt
 RUN pip freeze > requirements.txt
 
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /web/wheels -r requirements.txt

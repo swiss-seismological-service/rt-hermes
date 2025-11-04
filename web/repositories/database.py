@@ -12,8 +12,12 @@ from hermes.config import get_settings
 
 class DatabaseSessionManager:
     def __init__(self, host: str, engine_kwargs: dict[str, Any] = {}):
+        settings = get_settings()
         self._engine = create_async_engine(
-            host, pool_size=10, max_overflow=5, **engine_kwargs)
+            host,
+            pool_size=settings.POSTGRES_POOL_SIZE,
+            max_overflow=settings.POSTGRES_MAX_OVERFLOW,
+            **engine_kwargs)
         self._sessionmaker = async_sessionmaker(
             autocommit=False, autoflush=False, bind=self._engine)
 
