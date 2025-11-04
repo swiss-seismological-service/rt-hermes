@@ -161,7 +161,8 @@ def serve(
             name=forecastseries.name,
             concurrency_limit=concurrency_limit)
 
-        serve_fs(forecast_deployment, modelrun_deployment)
+        serve_fs(forecast_deployment, modelrun_deployment,
+                 pause_on_shutdown=False)
 
     except Exception as e:
         console.print(str(e))
