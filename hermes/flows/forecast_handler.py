@@ -33,10 +33,7 @@ class ForecastHandler:
     def __init__(self,
                  forecastseries_oid: UUID,
                  starttime: datetime | None = None,
-                 endtime: datetime | None = None,
-                 observation_starttime: datetime | None = None,
-                 observation_endtime: datetime | None = None,
-                 observation_window: int | None = None) -> None:
+                 endtime: datetime | None = None) -> None:
 
         try:
             self.logger = get_run_logger()
@@ -65,11 +62,7 @@ class ForecastHandler:
                                 'ForecastSeries. Exiting.')
             return None
 
-        self._calculate_forecast_timebounds(starttime,
-                                            endtime,
-                                            observation_starttime,
-                                            observation_endtime,
-                                            observation_window)
+        self._calculate_forecast_timebounds(starttime, endtime)
 
         self._create_forecast()
 
@@ -258,12 +251,9 @@ class ForecastHandler:
 
     def _calculate_forecast_timebounds(self,
                                        starttime: datetime,
-                                       endtime: datetime,
-                                       observation_starttime: datetime,
-                                       observation_endtime: datetime,
-                                       observation_window: int) -> None:
+                                       endtime: datetime) -> None:
         """
-        Sets the forecast start and end times.
+        Sets the forecast start and end times, and observation times.
 
         starttime:  When running forecasts manually or catching up on a
                     schedule, the starttime should be passed as an argument.
@@ -275,11 +265,6 @@ class ForecastHandler:
                     Else, it is given by the two following fields on
                     the ForecastSeries:
                     forecast_duration, forecast_endtime.
-        observation:Times should only be passed in either for manual runs
-                    when required or when catching up on a schedule.
-                    Otherwise, the observation starttime of the ForecastSeries
-                    should be used, and the endtime usually equals the
-                    starttime of the forecast.
         """
         # set start and endtime
         self.starttime = self.forecastseries.forecast_starttime or \
@@ -308,29 +293,28 @@ class ForecastHandler:
         if self.endtime.tzinfo is not None:
             self.endtime = self.endtime.replace(tzinfo=None)
 
-        # set observation times
-        self.observation_starttime = observation_starttime or \
-            self.forecastseries.observation_starttime
-        self.observation_endtime = observation_endtime or \
-            self.forecastseries.observation_endtime or \
+        # set observation times from ForecastSeries
+        self.observation_starttime = self.forecastseries.observation_starttime
+        self.observation_endtime = self.forecastseries.observation_endtime or \
             self.starttime
-        self.observation_window = observation_window or \
-            self.forecastseries.observation_window
-        if self.observation_starttime.tzinfo is not None:
+        self.observation_window = self.forecastseries.observation_window
+
+        if self.observation_starttime is not None and \
+                self.observation_starttime.tzinfo is not None:
             self.observation_starttime = self.observation_starttime.replace(
                 tzinfo=None)
         if self.observation_endtime.tzinfo is not None:
             self.observation_endtime = self.observation_endtime.replace(
                 tzinfo=None)
 
-        # user can't pass both observation times and observation window
+        # user can't configure both observation times and observation window
         if (self.observation_starttime is not None
             or self.observation_endtime != self.starttime) and \
                 self.observation_window is not None:
-            raise ValueError("You can't have an observation start/end time "
-                             "and an observation_window.")
+            raise ValueError("ForecastSeries can't have both observation "
+                             "start/end time and observation_window configured.")
 
-        # if observation window is passed, calculate observation start time
+        # if observation window is configured, calculate observation start time
         if self.observation_window is not None:
             self.observation_starttime = self.starttime - \
                 timedelta(seconds=self.observation_window)

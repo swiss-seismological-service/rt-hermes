@@ -1,5 +1,7 @@
 import pytest
 from prefect.logging import disable_run_logger
+from prefect.testing.fixtures import \
+    add_prefect_loggers_to_caplog  # noqa: F401
 from prefect.testing.utilities import prefect_test_harness
 from sqlalchemy import Connection
 
@@ -59,7 +61,18 @@ def modelrun_with_dependencies(session):
 
 @pytest.fixture(scope="class")
 def prefect():
-    """Prefect test harness for all tests."""
+    """Prefect test harness for all tests with logging disabled."""
     with prefect_test_harness():
         with disable_run_logger():
             yield
+
+
+@pytest.fixture(scope="function")
+def prefect_with_logs(add_prefect_loggers_to_caplog):  # noqa
+    """Prefect test harness with logging enabled.
+
+    Use this instead of 'prefect' when you want to see logs.
+    Automatically configures caplog to capture Prefect logs.
+    """
+    with prefect_test_harness():
+        yield
