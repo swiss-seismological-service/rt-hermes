@@ -10,6 +10,7 @@ MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'data')
 
 
+@pytest.mark.usefixtures("prefect")
 class TestSeismicityDataSource:
 
     def test_get_catalog_from_file(self):

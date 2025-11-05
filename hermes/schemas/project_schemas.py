@@ -61,12 +61,11 @@ class ForecastSeriesConfig(CreationInfoMixin):
     hydws_url: str | None = None
 
     @model_validator(mode='after')
-    @classmethod
-    def validate_observation_window(cls, values):
-        if values.observation_starttime and values.observation_window:
+    def validate_observation_window(self):
+        if self.observation_starttime and self.observation_window:
             raise ValueError("You can't set both observation_starttime "
                              "and observation_window.")
-        return values
+        return self
 
     @field_validator('bounding_polygon', mode='before')
     @classmethod
