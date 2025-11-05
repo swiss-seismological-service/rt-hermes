@@ -311,8 +311,9 @@ class ForecastHandler:
         if (self.observation_starttime is not None
             or self.observation_endtime != self.starttime) and \
                 self.observation_window is not None:
-            raise ValueError("ForecastSeries can't have both observation "
-                             "start/end time and observation_window configured.")
+            raise ValueError(
+                "ForecastSeries can't have both observation "
+                "start/end time and observation_window configured.")
 
         # if observation window is configured, calculate observation start time
         if self.observation_window is not None:

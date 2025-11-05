@@ -47,6 +47,6 @@
     "seismicityobservation_required": "REQUIRED",
     "injectionobservation_required": "REQUIRED",
     "injectionplan_required": "REQUIRED",
-    "fdsnws_url": "file:///home/nico/workspaces/hermes/examples/induced/quakeml.xml",
+    "fdsnws_url": "file:///home/nicolas/workspaces/rt-hermes/examples/induced/quakeml.xml",
     "hydws_url": "http://scforge.ethz.ch:8081/hydws/v1/boreholes/caf65646-8093-4aaf-989c-1c837f497667"
 }

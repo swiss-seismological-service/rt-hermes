@@ -5,7 +5,7 @@ from hermes.repositories.data import InjectionPlanRepository
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastRepository
 from hermes.schemas.base import EStatus
-from hermes.schemas.project_schemas import ForecastSeries
+from hermes.schemas.project_schemas import Forecast, ForecastSeries
 
 
 def calculate_forecast_timebounds(
@@ -24,7 +24,8 @@ def calculate_forecast_timebounds(
         scheduled_start_time: Scheduled start time from flow runtime
 
     Returns:
-        Tuple of (forecast_start, forecast_end, observation_start, observation_end)
+        Tuple of (forecast_start, forecast_end,
+        observation_start, observation_end)
 
     Raises:
         ValueError: If time validation fails
@@ -98,10 +99,11 @@ def calculate_forecast_timebounds(
         raise ValueError("Forecast start time can't be later than "
                          "forecast end time.")
 
-    return forecast_start, forecast_end, observation_starttime, observation_endtime
+    return forecast_start, forecast_end, \
+        observation_starttime, observation_endtime
 
 
-def update_forecast_status(forecast_oid: UUID, status: EStatus) -> 'Forecast':
+def update_forecast_status(forecast_oid: UUID, status: EStatus) -> Forecast:
     """
     Update the status of a forecast.
 
