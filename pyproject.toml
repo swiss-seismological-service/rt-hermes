@@ -43,7 +43,7 @@ dependencies = [
     "hermes-model",
     "hydws-client",
     "pandas",
-    "prefect==3.4.3",
+    "prefect>=3.5.0",
     "psycopg2",
     "pydantic-settings",
     "pydantic",
@@ -55,7 +55,7 @@ dependencies = [
     "typer",
 ]
 
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 
 [project.optional-dependencies]
 dev = [
