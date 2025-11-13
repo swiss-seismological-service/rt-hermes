@@ -5,7 +5,7 @@ from hermes.repositories.data import InjectionPlanRepository
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastRepository
 from hermes.schemas.base import EStatus
-from hermes.schemas.project_schemas import Forecast, ForecastSeries
+from hermes.schemas.project_schemas import ForecastSeries
 
 
 def calculate_forecast_timebounds(
@@ -103,7 +103,7 @@ def calculate_forecast_timebounds(
         observation_starttime, observation_endtime
 
 
-def update_forecast_status(forecast_oid: UUID, status: EStatus) -> Forecast:
+def update_forecast_status(forecast_oid: UUID, status: EStatus) -> EStatus:
     """
     Update the status of a forecast.
 
@@ -115,7 +115,9 @@ def update_forecast_status(forecast_oid: UUID, status: EStatus) -> Forecast:
         Updated Forecast object
     """
     with DatabaseSession() as session:
-        return ForecastRepository.update_status(session, forecast_oid, status)
+        forecast = ForecastRepository.update_status(
+            session, forecast_oid, status)
+    return forecast.status
 
 
 def delete_forecast(forecast_oid: UUID):

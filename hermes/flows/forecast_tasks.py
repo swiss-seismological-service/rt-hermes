@@ -20,7 +20,8 @@ from hermes.repositories.data import (InjectionObservationRepository,
                                       SeismicityObservationRepository)
 from hermes.repositories.database import DatabaseSession
 from hermes.schemas.base import EInput
-from hermes.schemas.data_schemas import InjectionObservation, InjectionPlan
+from hermes.schemas.data_schemas import (InjectionObservation, InjectionPlan,
+                                         SeismicityObservation)
 
 
 @task(name='FetchSeismicityObservation', cache_policy=None)
@@ -30,7 +31,7 @@ def fetch_seismicity_observation(
     observation_starttime: datetime,
     observation_endtime: datetime,
     required: EInput
-) -> UUID | None:
+) -> SeismicityObservation | None:
     """
     Fetches seismicity observation data and stores it to the database.
 
@@ -59,7 +60,7 @@ def fetch_seismicity_observation(
             data_source.get_quakeml(),
             forecast_oid
         )
-        return seismicity_obs.oid if seismicity_obs else None
+    return seismicity_obs if seismicity_obs else None
 
 
 @task(name='FetchInjectionObservation', cache_policy=None)
@@ -69,7 +70,7 @@ def fetch_injection_observation(
     observation_starttime: datetime,
     observation_endtime: datetime,
     required: EInput
-) -> UUID | None:
+) -> InjectionObservation | None:
     """
     Fetches injection observation data and stores it to the database.
 
@@ -102,13 +103,13 @@ def fetch_injection_observation(
             session,
             injection_observation
         )
-        return injection_obs.oid if injection_obs else None
+    return injection_obs if injection_obs else None
 
 
 @task(name='BuildInjectionPlans', cache_policy=None)
 def build_injection_plans(
     forecastseries_oid: UUID,
-    injection_observation_data: str | None,
+    injection_observation: InjectionObservation | None,
     starttime: datetime,
     endtime: datetime,
     required: EInput
@@ -118,7 +119,7 @@ def build_injection_plans(
 
     Args:
         forecastseries_oid: UUID of the ForecastSeries
-        injection_observation_data: JSON string of injection observation data
+        injection_observation: InjectionObservation object
         starttime: Start time for the injection plan
         endtime: End time for the injection plan
         required: Whether injection plans are required
@@ -149,8 +150,8 @@ def build_injection_plans(
         for template_plan in plan_templates:
             ip_builder = InjectionPlanBuilder(
                 json.loads(template_plan.template),
-                json.loads(injection_observation_data) if
-                injection_observation_data else {}
+                json.loads(injection_observation.data) if
+                injection_observation else {}
             )
             plan_data = ip_builder.build(starttime, endtime)
 
@@ -163,7 +164,7 @@ def build_injection_plans(
             created_plan = InjectionPlanRepository.create(session, new_plan)
             created_plans.append(created_plan)
 
-        return created_plans
+    return created_plans
 
 
 @task(name='ExecuteForecastModels', cache_policy=None)

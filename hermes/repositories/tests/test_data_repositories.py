@@ -55,33 +55,33 @@ class TestInjectionObservationRepository:
             [data] = json.load(f)
 
         # Test create_from_hydjson
-        injection_oid = InjectionObservationRepository.create_from_hydjson(
+        injection = InjectionObservationRepository.create_from_hydjson(
             session, json.dumps(data), full_scenario.forecast.oid)
 
         count = connection.execute(
             text('SELECT COUNT(*) FROM injectionobservation '
                  'WHERE oid = :oid'),
-            {'oid': injection_oid}
+            {'oid': injection.oid}
         ).scalar()
         assert count == 1
 
         # Test create_from_borehole_hydraulics
         borehole_hydraulics = BoreholeHydraulics(data)
-        injection_oid2 = InjectionObservationRepository.\
+        injection2 = InjectionObservationRepository.\
             create_from_borehole_hydraulics(
                 session, borehole_hydraulics, full_scenario.forecast.oid)
 
         count2 = connection.execute(
             text('SELECT COUNT(*) FROM injectionobservation WHERE oid = :oid'),
-            {'oid': injection_oid2}
+            {'oid': injection2.oid}
         ).scalar()
         assert count2 == 1
 
         # Test delete
-        InjectionObservationRepository.delete(session, injection_oid)
+        InjectionObservationRepository.delete(session, injection.oid)
         count_after_delete = connection.execute(
             text('SELECT COUNT(*) FROM injectionobservation WHERE oid = :oid'),
-            {'oid': injection_oid}
+            {'oid': injection.oid}
         ).scalar()
         assert count_after_delete == 0
 
@@ -95,26 +95,26 @@ class TestInjectionPlanRepository:
             [data] = json.load(f)
 
         # Test create_from_hydjson
-        injectionplan_oid = InjectionPlanRepository.create_from_hydjson(
+        injectionplan = InjectionPlanRepository.create_from_hydjson(
             session, json.dumps(data), 'test_plan',
             full_scenario.forecastseries.oid)
 
         count = connection.execute(
             text('SELECT COUNT(*) FROM injectionplan WHERE oid = :oid'),
-            {'oid': injectionplan_oid}
+            {'oid': injectionplan.oid}
         ).scalar()
         assert count == 1
 
         # Test create_from_borehole_hydraulics
         borehole_hydraulics = BoreholeHydraulics(data)
-        injectionplan_oid2 = InjectionPlanRepository.\
+        injectionplan2 = InjectionPlanRepository.\
             create_from_borehole_hydraulics(
                 session, borehole_hydraulics, 'test_plan2',
                 full_scenario.forecastseries.oid)
 
         count2 = connection.execute(
             text('SELECT COUNT(*) FROM injectionplan WHERE oid = :oid'),
-            {'oid': injectionplan_oid2}
+            {'oid': injectionplan2.oid}
         ).scalar()
         assert count2 == 1
 
@@ -124,10 +124,10 @@ class TestInjectionPlanRepository:
         assert len(plans) == 2
 
         # Test delete
-        InjectionPlanRepository.delete(session, injectionplan_oid)
+        InjectionPlanRepository.delete(session, injectionplan.oid)
         count_after_delete = connection.execute(
             text('SELECT COUNT(*) FROM injectionplan WHERE oid = :oid'),
-            {'oid': injectionplan_oid}
+            {'oid': injectionplan.oid}
         ).scalar()
         assert count_after_delete == 0
 

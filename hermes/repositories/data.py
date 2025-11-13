@@ -55,7 +55,7 @@ class SeismicityObservationRepository(repository_factory(
     def create_from_catalog(cls,
                             session: Session,
                             data: Catalog,
-                            forecast_oid: UUID) -> UUID:
+                            forecast_oid: UUID) -> SeismicityObservation:
         qml = data.to_quakeml()
         object_db = SeismicityObservation(
             data=qml,
@@ -72,7 +72,7 @@ class SeismicityObservationRepository(repository_factory(
     def create_from_quakeml(cls,
                             session: Session,
                             data: str,
-                            forecast_oid: UUID) -> UUID:
+                            forecast_oid: UUID) -> SeismicityObservation:
 
         object_db = SeismicityObservation(
             data=data,
@@ -89,10 +89,11 @@ class SeismicityObservationRepository(repository_factory(
 class InjectionObservationRepository(repository_factory(
         InjectionObservation, InjectionObservationTable)):
     @classmethod
-    def create_from_hydjson(cls,
-                            session: Session,
-                            data: str,
-                            forecast_oid: UUID) -> UUID:
+    def create_from_hydjson(
+            cls,
+            session: Session,
+            data: str,
+            forecast_oid: UUID) -> InjectionObservation:
         object_db = InjectionObservation(
             data=data,
             forecast_oid=forecast_oid
@@ -100,13 +101,14 @@ class InjectionObservationRepository(repository_factory(
 
         object_db = cls.create(session, object_db)
 
-        return object_db.oid
+        return object_db
 
     @classmethod
-    def create_from_borehole_hydraulics(cls,
-                                        session: Session,
-                                        data: BoreholeHydraulics,
-                                        forecast_oid: UUID) -> UUID:
+    def create_from_borehole_hydraulics(
+            cls,
+            session: Session,
+            data: BoreholeHydraulics,
+            forecast_oid: UUID) -> InjectionObservation:
         hydjson = json.dumps(data.to_json())
 
         return cls.create_from_hydjson(session, hydjson, forecast_oid)
@@ -115,11 +117,12 @@ class InjectionObservationRepository(repository_factory(
 class InjectionPlanRepository(repository_factory(
         InjectionPlan, InjectionPlanTable)):
     @classmethod
-    def create_from_hydjson(cls,
-                            session: Session,
-                            data: str,
-                            name: str,
-                            forecastseries_oid: UUID | None = None) -> UUID:
+    def create_from_hydjson(
+            cls,
+            session: Session,
+            data: str,
+            name: str,
+            forecastseries_oid: UUID | None = None) -> InjectionPlan:
 
         object_db = InjectionPlan(
             data=data,
@@ -127,25 +130,25 @@ class InjectionPlanRepository(repository_factory(
             name=name
         )
 
-        object_db = cls.create(session, object_db)
-
-        return object_db.oid
+        return cls.create(session, object_db)
 
     @classmethod
-    def create_from_borehole_hydraulics(cls,
-                                        session: Session,
-                                        data: BoreholeHydraulics,
-                                        name: str,
-                                        forecastseries_oid: UUID) -> UUID:
+    def create_from_borehole_hydraulics(
+            cls,
+            session: Session,
+            data: BoreholeHydraulics,
+            name: str,
+            forecastseries_oid: UUID) -> InjectionPlan:
         hydjson = json.dumps(data.to_json())
 
         return cls.create_from_hydjson(
             session, hydjson, name, forecastseries_oid)
 
     @classmethod
-    def get_by_forecastseries(cls,
-                              session: Session,
-                              forecastseries_oid: UUID) -> InjectionPlan:
+    def get_by_forecastseries(
+            cls,
+            session: Session,
+            forecastseries_oid: UUID) -> list[InjectionPlan]:
 
         q = select(InjectionPlanTable).where(
             InjectionPlanTable.forecastseries_oid == forecastseries_oid)
@@ -153,9 +156,10 @@ class InjectionPlanRepository(repository_factory(
         return [cls.model.model_validate(f) for f in result]
 
     @classmethod
-    def get_ids_by_forecast(cls,
-                            session: Session,
-                            forecast_oid: UUID) -> InjectionPlan:
+    def get_ids_by_forecast(
+            cls,
+            session: Session,
+            forecast_oid: UUID) -> list[UUID]:
 
         q = select(InjectionPlanTable.oid) \
             .join(ModelRunTable,

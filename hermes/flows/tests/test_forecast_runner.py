@@ -66,3 +66,7 @@ class TestForecastRunner:
         # Verify external data sources were called
         assert mock_get_catalog.called
         assert mock_get_injection.called
+
+        # Verify injection plans were created
+        assert forecast.injection_observation is not None
+        assert forecast.seismicity_observation is not None
