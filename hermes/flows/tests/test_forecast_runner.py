@@ -1,10 +1,11 @@
+import asyncio
 import os
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from prefect import flow
 
-from hermes.flows.forecast_runner import run_forecast
+from hermes.flows.forecast_runner import forecast_runner
 from hermes.schemas.base import EStatus
 
 CENTRAL_DATA_LOCATION = os.path.join(
@@ -17,7 +18,7 @@ with open(os.path.join(CENTRAL_DATA_LOCATION, 'quakeml.xml')) as f:
     SEISMICITY = f.read()
 
 
-@patch('hermes.flows.forecast_tasks.default_model_runner', autocast=True)
+@patch('hermes.flows.forecast_runner.default_model_runner', autocast=True)
 @patch('hermes.io.SeismicityDataSource.from_uri', autocast=True)
 @patch('hermes.io.HydraulicsDataSource.from_uri', autocast=True)
 @patch('hermes.flows.forecast_runner.DatabaseSession')
@@ -36,7 +37,7 @@ class TestForecastRunner:
                   flows_scenario_with_injection,
                   prefect_with_logs
                   ):
-        """Test the new flow-centric run_forecast function end-to-end."""
+        """Test the new flow-centric forecast_runner function end-to-end."""
         # Configure all DatabaseSession mocks to use test session
         forecast_service_session.return_value.__enter__.return_value = session
         forecast_tasks_session.return_value.__enter__.return_value = session
@@ -47,12 +48,12 @@ class TestForecastRunner:
         mock_get_injection().get_json.return_value = INJECTION
 
         # Execute the new flow
-        forecast = run_forecast(
+        forecast = asyncio.run(forecast_runner(
             flows_scenario_with_injection.forecastseries.oid,
             starttime=datetime(2022, 4, 21, 14, 50, 0),
             endtime=datetime(2022, 4, 21, 14, 55, 0),
             mode='local'
-        )
+        ))
 
         # Verify the flow completed successfully
         assert forecast is not None

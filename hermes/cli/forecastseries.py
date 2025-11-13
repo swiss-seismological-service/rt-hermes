@@ -7,7 +7,7 @@ from rich.console import Console
 from typing_extensions import Annotated
 
 from hermes.cli.utils import console_table, console_tree
-from hermes.flows.forecast_handler import forecast_runner
+from hermes.flows.forecast_runner import forecast_runner
 from hermes.flows.modelrun_handler import default_model_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastSeriesRepository

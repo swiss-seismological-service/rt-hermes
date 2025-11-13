@@ -1,16 +1,19 @@
 """New flow-centric forecast runner."""
+import asyncio
 import logging
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
 from prefect import flow, get_run_logger, runtime
+from prefect.client.orchestration import get_client
+from prefect.flow_runs import wait_for_flow_run
 
 from hermes.flows.forecast_tasks import (build_injection_plans,
-                                         execute_forecast_models,
                                          fetch_injection_observation,
                                          fetch_seismicity_observation)
 from hermes.flows.modelrun_builder import ModelRunBuilder
+from hermes.flows.modelrun_handler import default_model_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import (ForecastRepository,
                                          ForecastSeriesRepository)
@@ -42,8 +45,8 @@ def generate_flow_run_name():
     return f"Forecast-{parameters.get('forecastseries_oid')}"
 
 
-@flow(name='RunForecast', flow_run_name=generate_flow_run_name)
-def run_forecast(
+@flow(name='ForecastRunner', flow_run_name=generate_flow_run_name)
+async def forecast_runner(
     forecastseries_oid: UUID,
     starttime: datetime | None = None,
     endtime: datetime | None = None,
@@ -87,6 +90,18 @@ def run_forecast(
         forecastseries: ForecastSeries = ForecastSeriesRepository.get_by_id(
             session, forecastseries_oid)
 
+    # Calculate time boundaries
+    starttime, endtime, obs_start, obs_end = \
+        calculate_forecast_timebounds(forecastseries,
+                                      starttime,
+                                      endtime,
+                                      runtime.flow_run.scheduled_start_time)
+
+    logger.info(f"Forecast period: {starttime} to {endtime}")
+    logger.info(f"Observation period: {obs_start} to {obs_end}")
+
+    # Create Forecast entry
+    with DatabaseSession() as session:
         forecast: Forecast = ForecastRepository.create(
             session,
             Forecast(forecastseries_oid=forecastseries_oid,
@@ -94,17 +109,7 @@ def run_forecast(
                      starttime=starttime,
                      endtime=endtime,
                      ))
-
     logger.info(f"Created forecast {forecast.oid}")
-
-    # Calculate time boundaries
-    f_start, f_end, obs_start, obs_end = calculate_forecast_timebounds(
-        forecastseries,
-        starttime,
-        endtime,
-        runtime.flow_run.scheduled_start_time)
-    logger.info(f"Forecast period: {f_start} to {f_end}")
-    logger.info(f"Observation period: {obs_start} to {obs_end}")
 
     try:
         # Fetch observations in parallel
@@ -130,17 +135,19 @@ def run_forecast(
         forecast.seismicity_observation = seismicity_task.result()
         forecast.injection_observation = injection_task.result()
 
-        logger.info("Seismicity observation: "
-                    f"{forecast.seismicity_observation.oid}")
-        logger.info("Injection observation: "
-                    f"{forecast.injection_observation.oid}")
+        if forecast.seismicity_observation:
+            logger.info("Seismicity observation: "
+                        f"{forecast.seismicity_observation.oid}")
+        if forecast.injection_observation:
+            logger.info("Injection observation: "
+                        f"{forecast.injection_observation.oid}")
 
         # Build injection plans
         forecastseries.injection_plans = build_injection_plans(
             forecastseries_oid,
             forecast.injection_observation,
-            f_start,
-            f_end,
+            forecast.starttime,
+            forecast.endtime,
             forecastseries.injectionplan_required
         )
         if forecastseries.injection_plans:
@@ -166,10 +173,12 @@ def run_forecast(
         logger.info(f"Executing models in {mode} mode")
         forecast.status = update_forecast_status(forecast.oid,
                                                  EStatus.RUNNING)
-        execute_forecast_models(builder.runs,
-                                forecastseries.name,
-                                mode
-                                )
+
+        if mode == 'local':
+            for run in builder.runs:
+                default_model_runner(*run)
+        else:
+            await _execute_deployed_models(forecastseries.name, builder.runs)
 
         # Mark as completed
         logger.info("Forecast execution completed successfully")
@@ -182,3 +191,44 @@ def run_forecast(
         raise e
 
     return forecast
+
+
+async def _execute_deployed_models(
+    forecastseries_name: str,
+    model_runs: list
+) -> None:
+    """
+    Execute model runs as deployed flows and wait for completion.
+
+    Args:
+        forecastseries_name: Name of the ForecastSeries for deployment lookup
+        model_runs: List of (DBModelRunInfo, ModelConfig) tuples
+
+    Raises:
+        Exception: If any model runs fail
+    """
+    async with get_client() as client:
+        # Get deployment by name
+        deployment = await client.read_deployment_by_name(
+            f'DefaultModelRunner/{forecastseries_name}'
+        )
+
+        # Create all flow runs
+        flow_runs = []
+        for run in model_runs:
+            flow_run = await client.create_flow_run_from_deployment(
+                deployment_id=deployment.id,
+                parameters={'modelrun_info': run[0],
+                            'modelconfig': run[1]}
+            )
+            flow_runs.append(flow_run)
+
+        # Wait for all flow runs to complete
+        finished_runs = await asyncio.gather(*[
+            wait_for_flow_run(flow_run_id=fr.id) for fr in flow_runs
+        ])
+
+        # Check for failures
+        failed = [fr for fr in finished_runs if fr.state.is_failed()]
+        if failed:
+            raise Exception(f"{len(failed)} model run(s) failed")

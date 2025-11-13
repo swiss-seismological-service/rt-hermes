@@ -11,7 +11,7 @@ from prefect.client.schemas.objects import DeploymentSchedule
 from prefect.client.schemas.schedules import RRuleSchedule
 from prefect.deployments import run_deployment
 
-from hermes.flows.forecast_handler import forecast_runner
+from hermes.flows.forecast_runner import forecast_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastSeriesRepository
 from hermes.schemas.project_schemas import (ForecastSeries,
@@ -233,9 +233,9 @@ class ForecastSeriesScheduler:
 
         if mode == 'local':
             for d in past_dates:
-                forecast_runner(self.forecastseries.oid,
-                                starttime=d,
-                                mode=mode)
+                asyncio.run(forecast_runner(self.forecastseries.oid,
+                                            starttime=d,
+                                            mode=mode))
         elif mode == 'deploy':
             for d in past_dates:
                 run_deployment(

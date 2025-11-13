@@ -1,17 +1,10 @@
 """Prefect tasks for forecast execution."""
-import asyncio
 import json
-import logging
 from datetime import datetime
-from time import sleep
-from typing import Literal
 from uuid import UUID
 
-from prefect import get_run_logger, task
-from prefect.client.orchestration import get_client
-from prefect.deployments import run_deployment
+from prefect import task
 
-from hermes.flows.modelrun_handler import default_model_runner
 from hermes.io.hydraulics import HydraulicsDataSource
 from hermes.io.injectionplans import InjectionPlanBuilder
 from hermes.io.seismicity import SeismicityDataSource
@@ -165,68 +158,3 @@ def build_injection_plans(
             created_plans.append(created_plan)
 
     return created_plans
-
-
-@task(name='ExecuteForecastModels', cache_policy=None)
-def execute_forecast_models(
-    model_runs: list,
-    forecastseries_name: str,
-    mode: Literal['local', 'deploy'] = 'local'
-) -> None:
-    """
-    Executes forecast model runs either locally or as deployed flows.
-
-    Args:
-        model_runs: List of (DBModelRunInfo, ModelConfig) tuples
-        forecastseries_name: Name of the ForecastSeries (for deployment naming)
-        mode: Execution - 'local' runs in-process, 'deploy' submits to Prefect
-
-    Raises:
-        Exception: If any model run fails
-    """
-    try:
-        logger = get_run_logger()
-    except BaseException:
-        logger = logging.getLogger('prefect.hermes')
-
-    if not model_runs:
-        logger.warning('No modelruns to execute.')
-        return None
-
-    if mode == 'local':
-        for run in model_runs:
-            default_model_runner(*run)
-    else:
-        # Deploy mode: submit model runs as separate flow deployments
-        running = []
-
-        for run in model_runs:
-            running.append(run_deployment(
-                name=f'DefaultModelRunner/{forecastseries_name}',
-                parameters={'modelrun_info': run[0],
-                            'modelconfig': run[1]},
-                timeout=0
-            ))
-
-        # Monitor until all runs complete
-        is_final = [False] * len(running)
-        while not all(is_final):
-            is_final = [asyncio.run(_check_flow_run_is_final(r.id))
-                        for r in running]
-            if not all(is_final):
-                sleep(10)
-
-
-async def _check_flow_run_is_final(flow_run_id: UUID) -> bool:
-    """
-    Check if a flow run is in a final state.
-
-    Args:
-        flow_run_id: UUID of the flow run to check
-
-    Returns:
-        True if the flow run is in a final state
-    """
-    async with get_client() as client:
-        flow_run = await client.read_flow_run(flow_run_id=flow_run_id)
-        return flow_run.state.is_final()

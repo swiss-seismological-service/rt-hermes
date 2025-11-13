@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 from datetime import datetime
 
@@ -7,7 +8,7 @@ from rich.console import Console
 from typing_extensions import Annotated
 
 from hermes.cli.utils import console_table
-from hermes.flows.forecast_handler import forecast_runner
+from hermes.flows.forecast_runner import forecast_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import (ForecastRepository,
                                          ForecastSeriesRepository)
@@ -64,7 +65,7 @@ def run(
 
         mode = 'local' if local else 'deploy'
         if local:
-            forecast_runner(forecastseries_oid, start, end, mode)
+            asyncio.run(forecast_runner(forecastseries_oid, start, end, mode))
         else:
 
             with DatabaseSession() as session:

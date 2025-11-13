@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import datetime
 from unittest.mock import patch
@@ -5,7 +6,7 @@ from unittest.mock import patch
 from sqlalchemy import func, select
 
 from hermes.datamodel.result_tables import EventForecastTable
-from hermes.flows.forecast_handler import forecast_runner
+from hermes.flows.forecast_runner import forecast_runner
 from hermes.repositories.results import ModelResultRepository
 from hermes.schemas import EInput
 
@@ -15,11 +16,20 @@ MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 class TestDefaultModelRun:
     @patch('hermes.io.seismicity.SeismicityDataSource.from_uri')
-    @patch('hermes.flows.forecast_handler.DatabaseSession')
+    @patch('hermes.flows.forecast_runner.DatabaseSession')
+    @patch('hermes.flows.forecast_tasks.DatabaseSession')
+    @patch('hermes.services.forecast_service.DatabaseSession')
     @patch('hermes.flows.modelrun_handler.DatabaseSession')
     def test_full_flow(self,
-                       mock_session_m, mock_session_fc, mock_get_catalog,
-                       session, prefect):
+                       # Mocks
+                       mock_session_m,
+                       mock_session_fs,
+                       mock_session_t,
+                       mock_session_fc,
+                       mock_get_catalog,
+                       # Fixtures
+                       session,
+                       prefect):
 
         # Create test data specifically configured for this test
         from datetime import timedelta
@@ -56,11 +66,13 @@ class TestDefaultModelRun:
             catalog = f.read()
 
         mock_session_fc.return_value.__enter__.return_value = session
+        mock_session_t.return_value.__enter__.return_value = session
+        mock_session_fs.return_value.__enter__.return_value = session
         mock_session_m.return_value = session
         mock_get_catalog().get_quakeml.return_value = catalog
 
-        forecast_runner(forecastseries.oid,
-                        starttime=datetime(2022, 1, 1, 0, 0, 0))
+        asyncio.run(forecast_runner(forecastseries.oid,
+                                    starttime=datetime(2022, 1, 1, 0, 0, 0)))
 
         # Count ModelResults using repository method
         model_results = ModelResultRepository.get_all(session)

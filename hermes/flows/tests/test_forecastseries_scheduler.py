@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import ANY, MagicMock, PropertyMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 from dateutil.rrule import SECONDLY, rrule
@@ -128,10 +128,10 @@ class TestForecastSeriesScheduler:
             scheduler._build_rrule('future')
 
     @patch('hermes.flows.forecastseries_scheduler.forecast_runner',
-           autospec=True)
+           new_callable=AsyncMock)
     def test_catchup(self,
                      # MOCKS
-                     mock_forecastrunner: MagicMock,
+                     mock_forecastrunner: AsyncMock,
                      mock_fs_get_by_id: MagicMock
                      ):
         fs = ForecastSeries(
