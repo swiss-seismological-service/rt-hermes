@@ -17,8 +17,10 @@ from hermes.flows.modelrun_handler import default_model_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import (ForecastRepository,
                                          ForecastSeriesRepository)
+from hermes.repositories.results import ModelRunRepository
 from hermes.schemas import Forecast, ForecastSeries
 from hermes.schemas.base import EStatus
+from hermes.schemas.result_schemas import ModelRun
 from hermes.services.forecast_service import (calculate_forecast_timebounds,
                                               update_forecast_status)
 from hermes.utils.prefect import futures_wait
@@ -175,8 +177,7 @@ async def forecast_runner(
                                                  EStatus.RUNNING)
 
         if mode == 'local':
-            for run in builder.runs:
-                default_model_runner(*run)
+            _execute_local_models(builder.runs)
         else:
             await _execute_deployed_models(forecastseries.name, builder.runs)
 
@@ -193,6 +194,49 @@ async def forecast_runner(
     return forecast
 
 
+def _execute_local_models(
+    model_runs: list
+) -> None:
+    """
+    Execute model runs locally in sequence.
+
+    Args:
+        model_runs: List of (DBModelRunInfo, ModelConfig) tuples
+    """
+    try:
+        logger = get_run_logger()
+    except BaseException:
+        logger = logging.getLogger('prefect.hermes')
+
+    with DatabaseSession() as session:
+        for modelrun_info, modelconfig in model_runs:
+            # Create ModelRun entry with SCHEDULED status
+            modelrun = ModelRun(
+                status=EStatus.SCHEDULED,
+                modelconfig_oid=modelconfig.oid,
+                forecast_oid=modelrun_info.forecast_oid,
+                injectionplan_oid=modelrun_info.injection_plan_oid
+            )
+            modelrun = ModelRunRepository.create(session, modelrun)
+
+            # Execute model run and update status based on outcome
+            try:
+                # Update status to RUNNING before execution
+                ModelRunRepository.update_status(
+                    session, modelrun.oid, EStatus.RUNNING)
+
+                default_model_runner(modelrun_info, modelconfig, modelrun)
+
+                ModelRunRepository.update_status(
+                    session, modelrun.oid, EStatus.COMPLETED)
+            except Exception as e:
+                logger.error(f"ModelRun {modelrun.oid} failed: {e}")
+                ModelRunRepository.update_status(
+                    session, modelrun.oid, EStatus.FAILED)
+                # Continue with remaining model runs even if one fails
+                pass
+
+
 async def _execute_deployed_models(
     forecastseries_name: str,
     model_runs: list
@@ -207,6 +251,24 @@ async def _execute_deployed_models(
     Raises:
         Exception: If any model runs fail
     """
+    try:
+        logger = get_run_logger()
+    except BaseException:
+        logger = logging.getLogger('prefect.hermes')
+
+    # Create ModelRun entries upfront
+    with DatabaseSession() as session:
+        modelruns = []
+        for modelrun_info, modelconfig in model_runs:
+            modelrun = ModelRun(
+                status=EStatus.SCHEDULED,
+                modelconfig_oid=modelconfig.oid,
+                forecast_oid=modelrun_info.forecast_oid,
+                injectionplan_oid=modelrun_info.injection_plan_oid
+            )
+            modelrun = ModelRunRepository.create(session, modelrun)
+            modelruns.append(modelrun)
+
     async with get_client() as client:
         # Get deployment by name
         deployment = await client.read_deployment_by_name(
@@ -215,20 +277,39 @@ async def _execute_deployed_models(
 
         # Create all flow runs
         flow_runs = []
-        for run in model_runs:
+        for (modelrun_info, modelconfig), \
+                modelrun in zip(model_runs, modelruns):
             flow_run = await client.create_flow_run_from_deployment(
                 deployment_id=deployment.id,
-                parameters={'modelrun_info': run[0],
-                            'modelconfig': run[1]}
+                parameters={'modelrun_info': modelrun_info,
+                            'modelconfig': modelconfig,
+                            'modelrun': modelrun}
             )
-            flow_runs.append(flow_run)
+            flow_runs.append((flow_run, modelrun))
+
+        # Update all ModelRuns to RUNNING status
+        with DatabaseSession() as session:
+            for _, modelrun in flow_runs:
+                ModelRunRepository.update_status(
+                    session, modelrun.oid, EStatus.RUNNING)
 
         # Wait for all flow runs to complete
         finished_runs = await asyncio.gather(*[
-            wait_for_flow_run(flow_run_id=fr.id) for fr in flow_runs
+            wait_for_flow_run(flow_run_id=fr.id) for fr, _ in flow_runs
         ])
 
-        # Check for failures
-        failed = [fr for fr in finished_runs if fr.state.is_failed()]
-        if failed:
-            raise Exception(f"{len(failed)} model run(s) failed")
+        # Update ModelRun status based on flow execution results
+        with DatabaseSession() as session:
+            failed_count = 0
+            for finished_run, (_, modelrun) in zip(finished_runs, flow_runs):
+                if finished_run.state.is_failed():
+                    logger.error(f"ModelRun {modelrun.oid} failed")
+                    ModelRunRepository.update_status(
+                        session, modelrun.oid, EStatus.FAILED)
+                    failed_count += 1
+                else:
+                    ModelRunRepository.update_status(
+                        session, modelrun.oid, EStatus.COMPLETED)
+
+            if failed_count > 0:
+                raise Exception(f"{failed_count} model run(s) failed")

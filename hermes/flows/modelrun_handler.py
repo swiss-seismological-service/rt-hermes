@@ -15,8 +15,7 @@ from hermes.repositories.data import (InjectionObservationRepository,
                                       InjectionPlanRepository,
                                       SeismicityObservationRepository)
 from hermes.repositories.database import DatabaseSession
-from hermes.repositories.results import ModelRunRepository
-from hermes.schemas.base import EResultType, EStatus
+from hermes.schemas.base import EResultType
 from hermes.schemas.model_schemas import DBModelRunInfo, ModelConfig
 from hermes.schemas.result_schemas import ModelRun
 
@@ -29,6 +28,7 @@ class ModelRunHandlerInterface:
     def __init__(self,
                  modelrun_info: DBModelRunInfo,
                  modelconfig: ModelConfig,
+                 modelrun: ModelRun,
                  **kwargs) -> None:
         super().__init__(**kwargs)
         try:
@@ -37,14 +37,13 @@ class ModelRunHandlerInterface:
             self.logger = logging.getLogger('prefect.hermes')
         self.modelrun_info = modelrun_info
         self.modelconfig = modelconfig
+        self.modelrun = modelrun
 
         self.injection_plan = self._fetch_injection_plan()
         self.injection_observation = self._fetch_injection_observation()
         self.seismicity_observation = self._fetch_seismicity_observation()
 
         self.model_input = self._model_input()
-
-        self.modelrun = self._create_modelrun()
 
         self.save_results = {EResultType.CATALOG: self._save_catalog,
                              EResultType.BINS: self._save_bins,
@@ -67,10 +66,6 @@ class ModelRunHandlerInterface:
 
             model_parameters=self.modelconfig.model_parameters
         )
-
-    @abstractmethod
-    def _create_modelrun(self) -> None:
-        raise NotImplementedError
 
     @abstractmethod
     def run(self) -> None:
@@ -109,36 +104,17 @@ class DefaultModelRunHandler(ModelRunHandlerInterface):
 
     @task(name='RunModel', cache_policy=None)
     def run(self) -> None:
-        try:
-            model_module = importlib.import_module(self.modelconfig.sfm_module)
-            model_function = getattr(
-                model_module, self.modelconfig.sfm_function)
-            results = model_function(self.model_input.model_dump())
-            self.save_results[self.modelconfig.result_type](results)
-        except BaseException as e:
-            ModelRunRepository.update_status(
-                self.session, self.modelrun.oid, EStatus.FAILED)
-            raise e
-        else:
-            ModelRunRepository.update_status(
-                self.session, self.modelrun.oid, EStatus.COMPLETED)
+        model_module = importlib.import_module(self.modelconfig.sfm_module)
+        model_function = getattr(
+            model_module, self.modelconfig.sfm_function)
+        results = model_function(self.model_input.model_dump())
+        self.save_results[self.modelconfig.result_type](results)
 
     def __del__(self):
         try:
             self.session.close()
         except BaseException:
             pass
-
-    def _create_modelrun(self) -> None:
-        modelrun = ModelRun(
-            status=EStatus.SCHEDULED,
-            modelconfig_oid=self.modelconfig.oid,
-            forecast_oid=self.modelrun_info.forecast_oid,
-            injectionplan_oid=self.modelrun_info.injection_plan_oid
-        )
-
-        return ModelRunRepository.create(self.session,
-                                         modelrun)
 
     def _fetch_injection_observation(self) -> None:
         if not self.modelrun_info.injection_observation_oid:
@@ -183,7 +159,8 @@ class DefaultModelRunHandler(ModelRunHandlerInterface):
 @flow(name='DefaultModelRunner',
       flow_run_name='ModelRun-{modelconfig.name}')
 def default_model_runner(modelrun_info: DBModelRunInfo,
-                         modelconfig: ModelConfig) -> DefaultModelRunHandler:
-    runner = DefaultModelRunHandler(modelrun_info, modelconfig)
+                         modelconfig: ModelConfig,
+                         modelrun: ModelRun) -> DefaultModelRunHandler:
+    runner = DefaultModelRunHandler(modelrun_info, modelconfig, modelrun)
     runner.run()
     return runner
