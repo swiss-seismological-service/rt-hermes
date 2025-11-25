@@ -4,18 +4,39 @@ import logging
 from typing import Any
 
 from hermes_model import ModelInput
-from prefect import flow, get_run_logger
+from prefect import Flow, flow, get_run_logger
+from prefect.client.schemas.objects import FlowRun
+from prefect.states import State
 from seismostats import ForecastCatalog, ForecastGRRateGrid
 
 from hermes.repositories.data import (InjectionObservationRepository,
                                       InjectionPlanRepository,
                                       SeismicityObservationRepository)
 from hermes.repositories.database import DatabaseSession
-from hermes.schemas.base import EResultType
+from hermes.repositories.results import ModelRunRepository
+from hermes.schemas.base import EResultType, EStatus
 from hermes.schemas.model_schemas import DBModelRunInfo, ModelConfig
 from hermes.schemas.result_schemas import ModelRun
 from hermes.services.result_service import (save_forecast_catalog,
                                             save_forecast_grrategrid)
+
+
+def on_modelrun_completed(flow: Flow, flow_run: FlowRun, state: State) -> None:
+    """Update ModelRun status to COMPLETED when flow succeeds."""
+    modelrun = flow_run.parameters.get('modelrun')
+    if modelrun and hasattr(modelrun, 'oid'):
+        with DatabaseSession() as session:
+            ModelRunRepository.update_status(
+                session, modelrun.oid, EStatus.COMPLETED)
+
+
+def on_modelrun_failed(flow: Flow, flow_run: FlowRun, state: State) -> None:
+    """Update ModelRun status to FAILED when flow fails."""
+    modelrun = flow_run.parameters.get('modelrun')
+    if modelrun and hasattr(modelrun, 'oid'):
+        with DatabaseSession() as session:
+            ModelRunRepository.update_status(
+                session, modelrun.oid, EStatus.FAILED)
 
 
 class ModelRunDataAccess:
@@ -82,7 +103,9 @@ class ModelRunDataAccess:
 
 
 @flow(name='DefaultModelRunner',
-      flow_run_name='ModelRun-{modelconfig.name}')
+      flow_run_name='ModelRun-{modelconfig.name}',
+      on_completion=[on_modelrun_completed],
+      on_failure=[on_modelrun_failed])
 def default_model_runner(modelrun_info: DBModelRunInfo,
                          modelconfig: ModelConfig,
                          modelrun: ModelRun) -> None:

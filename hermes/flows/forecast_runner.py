@@ -268,15 +268,9 @@ def _execute_local_models(
             try:
                 ModelRunRepository.update_status(
                     session, modelrun.oid, EStatus.RUNNING)
-
                 default_model_runner(modelrun_info, modelconfig, modelrun)
-
-                ModelRunRepository.update_status(
-                    session, modelrun.oid, EStatus.COMPLETED)
             except Exception as e:
                 logger.error(f"ModelRun {modelrun.oid} failed: {e}")
-                ModelRunRepository.update_status(
-                    session, modelrun.oid, EStatus.FAILED)
                 failed_count += 1
 
     return failed_count
@@ -340,16 +334,11 @@ async def _execute_deployed_models(
             wait_for_flow_run(flow_run_id=fr.id) for fr, _ in flow_runs
         ])
 
+        # Count failures (status updates handled by flow hooks on remote worker)
         failed_count = 0
-        with DatabaseSession() as session:
-            for finished_run, (_, modelrun) in zip(finished_runs, flow_runs):
-                if finished_run.state.is_failed():
-                    logger.error(f"ModelRun {modelrun.oid} failed")
-                    ModelRunRepository.update_status(
-                        session, modelrun.oid, EStatus.FAILED)
-                    failed_count += 1
-                else:
-                    ModelRunRepository.update_status(
-                        session, modelrun.oid, EStatus.COMPLETED)
+        for finished_run, (_, modelrun) in zip(finished_runs, flow_runs):
+            if finished_run.state.is_failed():
+                logger.error(f"ModelRun {modelrun.oid} failed")
+                failed_count += 1
 
     return failed_count
