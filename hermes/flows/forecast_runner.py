@@ -334,7 +334,7 @@ async def _execute_deployed_models(
             wait_for_flow_run(flow_run_id=fr.id) for fr, _ in flow_runs
         ])
 
-        # Count failures (status updates handled by flow hooks on remote worker)
+        # Count failures
         failed_count = 0
         for finished_run, (_, modelrun) in zip(finished_runs, flow_runs):
             if finished_run.state.is_failed():
