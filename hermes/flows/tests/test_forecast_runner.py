@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from prefect import flow
 
-from hermes.flows.forecast_runner import forecast_runner
+from hermes.flows.forecast_runner import forecast_runner, prepare_model_runs
 from hermes.schemas.base import EStatus
 
 CENTRAL_DATA_LOCATION = os.path.join(
@@ -71,3 +71,30 @@ class TestForecastRunner:
         # Verify injection plans were created
         assert forecast.injection_observation is not None
         assert forecast.seismicity_observation is not None
+
+
+def test_prepare_model_runs(flows_scenario):
+    runs = prepare_model_runs(
+        flows_scenario.forecast,
+        flows_scenario.forecastseries,
+        [flows_scenario.model_config])
+
+    assert len(runs) == 1
+    assert runs[0][1] == flows_scenario.model_config
+
+    modelrun_info = runs[0][0]
+    assert (modelrun_info.forecastseries_oid
+            == flows_scenario.forecastseries.oid)
+    assert modelrun_info.forecast_oid == flows_scenario.forecast.oid
+    assert (modelrun_info.forecast_start
+            == flows_scenario.forecast.starttime)
+    assert modelrun_info.forecast_end == flows_scenario.forecast.endtime
+    assert (modelrun_info.bounding_polygon
+            == flows_scenario.forecastseries.bounding_polygon.wkt)
+    assert (modelrun_info.depth_min
+            == flows_scenario.forecastseries.depth_min)
+    assert (modelrun_info.depth_max
+            == flows_scenario.forecastseries.depth_max)
+    assert modelrun_info.injection_plan_oid is None
+    assert modelrun_info.injection_observation_oid is None
+    assert modelrun_info.seismicity_observation_oid is None

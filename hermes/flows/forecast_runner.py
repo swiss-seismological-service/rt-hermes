@@ -12,13 +12,13 @@ from prefect.flow_runs import wait_for_flow_run
 from hermes.flows.forecast_tasks import (build_injection_plans,
                                          fetch_injection_observation,
                                          fetch_seismicity_observation)
-from hermes.flows.modelrun_builder import ModelRunBuilder
 from hermes.flows.modelrun_handler import default_model_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import (ForecastRepository,
                                          ForecastSeriesRepository)
 from hermes.repositories.results import ModelRunRepository
-from hermes.schemas import Forecast, ForecastSeries
+from hermes.schemas import (DBModelRunInfo, Forecast, ForecastSeries,
+                            InjectionPlan, ModelConfig)
 from hermes.schemas.base import EStatus
 from hermes.schemas.result_schemas import ModelRun
 from hermes.services.forecast_service import (calculate_forecast_timebounds,
@@ -157,19 +157,15 @@ async def forecast_runner(
                         "injection plan(s)")
 
         # Create model runs
-        builder = ModelRunBuilder(
-            forecast,
-            forecastseries,
-            modelconfigs
-        )
+        model_runs = prepare_model_runs(forecast, forecastseries, modelconfigs)
 
-        if not builder.runs:
+        if not model_runs:
             logger.warning('No modelruns to execute.')
             forecast.status = update_forecast_status(forecast.oid,
                                                      EStatus.CANCELLED)
             return forecast
 
-        logger.info(f"Prepared {len(builder.runs)} model run(s)")
+        logger.info(f"Prepared {len(model_runs)} model run(s)")
 
         # Execute model runs
         logger.info(f"Executing models in {mode} mode")
@@ -177,9 +173,9 @@ async def forecast_runner(
                                                  EStatus.RUNNING)
 
         if mode == 'local':
-            _execute_local_models(builder.runs)
+            _execute_local_models(model_runs)
         else:
-            await _execute_deployed_models(forecastseries.name, builder.runs)
+            await _execute_deployed_models(forecastseries.name, model_runs)
 
         # Mark as completed
         logger.info("Forecast execution completed successfully")
@@ -192,6 +188,46 @@ async def forecast_runner(
         raise e
 
     return forecast
+
+
+def prepare_model_runs(
+    forecast: Forecast,
+    forecastseries: ForecastSeries,
+    modelconfigs: list[ModelConfig]
+) -> list[tuple[DBModelRunInfo, ModelConfig]]:
+    """
+    Build (run_info, config) tuples for all enabled model/plan combinations.
+    """
+    enabled = [c for c in modelconfigs if c.enabled]
+    plans = forecastseries.injection_plans or [None]
+
+    return [
+        (_make_run_info(forecast, forecastseries, plan), config)
+        for config in enabled
+        for plan in plans
+    ]
+
+
+def _make_run_info(
+    forecast: Forecast,
+    forecastseries: ForecastSeries,
+    injection_plan: InjectionPlan | None
+) -> DBModelRunInfo:
+    return DBModelRunInfo(
+        forecastseries_oid=forecastseries.oid,
+        forecast_oid=forecast.oid,
+        forecast_start=forecast.starttime,
+        forecast_end=forecast.endtime,
+        injection_observation_oid=getattr(
+            forecast.injection_observation, 'oid', None),
+        seismicity_observation_oid=getattr(
+            forecast.seismicity_observation, 'oid', None),
+        bounding_polygon=forecastseries.bounding_polygon,
+        depth_min=forecastseries.depth_min,
+        depth_max=forecastseries.depth_max,
+        model_settings=forecastseries.model_settings,
+        injection_plan_oid=getattr(injection_plan, 'oid', None)
+    )
 
 
 def _execute_local_models(
