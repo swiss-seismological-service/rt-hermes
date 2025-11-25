@@ -8,6 +8,7 @@ from uuid import UUID
 from prefect import flow, get_run_logger, runtime
 from prefect.client.orchestration import get_client
 from prefect.flow_runs import wait_for_flow_run
+from prefect.futures import wait
 
 from hermes.flows.forecast_tasks import (build_injection_plans,
                                          fetch_injection_observation,
@@ -23,7 +24,6 @@ from hermes.schemas.base import EStatus
 from hermes.schemas.result_schemas import ModelRun
 from hermes.services.forecast_service import (calculate_forecast_timebounds,
                                               update_forecast_status)
-from hermes.utils.prefect import futures_wait
 
 
 def generate_flow_run_name():
@@ -133,7 +133,7 @@ async def forecast_runner(
         )
 
         # Wait for both to complete
-        futures_wait([seismicity_task, injection_task])
+        wait([seismicity_task, injection_task])
         forecast.seismicity_observation = seismicity_task.result()
         forecast.injection_observation = injection_task.result()
 
@@ -173,19 +173,26 @@ async def forecast_runner(
                                                  EStatus.RUNNING)
 
         if mode == 'local':
-            _execute_local_models(model_runs)
+            failed_count = _execute_local_models(model_runs)
         else:
-            await _execute_deployed_models(forecastseries.name, model_runs)
+            failed_count = await _execute_deployed_models(
+                forecastseries.name, model_runs)
 
-        # Mark as completed
-        logger.info("Forecast execution completed successfully")
-        forecast.status = update_forecast_status(
-            forecast.oid, EStatus.COMPLETED)
+        # Set final status based on model run results
+        if failed_count == 0:
+            logger.info("Forecast execution completed successfully")
+            forecast.status = update_forecast_status(
+                forecast.oid, EStatus.COMPLETED)
+        else:
+            logger.warning(f"Forecast completed with {failed_count} "
+                           f"failed model run(s)")
+            forecast.status = update_forecast_status(
+                forecast.oid, EStatus.FAILED)
 
     except Exception as e:
         logger.error(f"Forecast execution failed: {e}")
         forecast.status = update_forecast_status(forecast.oid, EStatus.FAILED)
-        raise e
+        raise
 
     return forecast
 
@@ -232,21 +239,24 @@ def _make_run_info(
 
 def _execute_local_models(
     model_runs: list
-) -> None:
+) -> int:
     """
     Execute model runs locally in sequence.
 
     Args:
         model_runs: List of (DBModelRunInfo, ModelConfig) tuples
+
+    Returns:
+        Number of failed model runs
     """
     try:
         logger = get_run_logger()
     except BaseException:
         logger = logging.getLogger('prefect.hermes')
 
+    failed_count = 0
     with DatabaseSession() as session:
         for modelrun_info, modelconfig in model_runs:
-            # Create ModelRun entry with SCHEDULED status
             modelrun = ModelRun(
                 status=EStatus.SCHEDULED,
                 modelconfig_oid=modelconfig.oid,
@@ -255,9 +265,7 @@ def _execute_local_models(
             )
             modelrun = ModelRunRepository.create(session, modelrun)
 
-            # Execute model run and update status based on outcome
             try:
-                # Update status to RUNNING before execution
                 ModelRunRepository.update_status(
                     session, modelrun.oid, EStatus.RUNNING)
 
@@ -269,14 +277,15 @@ def _execute_local_models(
                 logger.error(f"ModelRun {modelrun.oid} failed: {e}")
                 ModelRunRepository.update_status(
                     session, modelrun.oid, EStatus.FAILED)
-                # Continue with remaining model runs even if one fails
-                pass
+                failed_count += 1
+
+    return failed_count
 
 
 async def _execute_deployed_models(
     forecastseries_name: str,
     model_runs: list
-) -> None:
+) -> int:
     """
     Execute model runs as deployed flows and wait for completion.
 
@@ -284,15 +293,14 @@ async def _execute_deployed_models(
         forecastseries_name: Name of the ForecastSeries for deployment lookup
         model_runs: List of (DBModelRunInfo, ModelConfig) tuples
 
-    Raises:
-        Exception: If any model runs fail
+    Returns:
+        Number of failed model runs
     """
     try:
         logger = get_run_logger()
     except BaseException:
         logger = logging.getLogger('prefect.hermes')
 
-    # Create ModelRun entries upfront
     with DatabaseSession() as session:
         modelruns = []
         for modelrun_info, modelconfig in model_runs:
@@ -306,7 +314,6 @@ async def _execute_deployed_models(
             modelruns.append(modelrun)
 
     async with get_client() as client:
-        # Get deployment by name
         deployment = await client.read_deployment_by_name(
             f'DefaultModelRunner/{forecastseries_name}'
         )
@@ -323,7 +330,6 @@ async def _execute_deployed_models(
             )
             flow_runs.append((flow_run, modelrun))
 
-        # Update all ModelRuns to RUNNING status
         with DatabaseSession() as session:
             for _, modelrun in flow_runs:
                 ModelRunRepository.update_status(
@@ -334,9 +340,8 @@ async def _execute_deployed_models(
             wait_for_flow_run(flow_run_id=fr.id) for fr, _ in flow_runs
         ])
 
-        # Update ModelRun status based on flow execution results
+        failed_count = 0
         with DatabaseSession() as session:
-            failed_count = 0
             for finished_run, (_, modelrun) in zip(finished_runs, flow_runs):
                 if finished_run.state.is_failed():
                     logger.error(f"ModelRun {modelrun.oid} failed")
@@ -347,5 +352,4 @@ async def _execute_deployed_models(
                     ModelRunRepository.update_status(
                         session, modelrun.oid, EStatus.COMPLETED)
 
-            if failed_count > 0:
-                raise Exception(f"{failed_count} model run(s) failed")
+    return failed_count
