@@ -1,14 +1,18 @@
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from sqlalchemy import func, select
 
 from hermes.datamodel.result_tables import EventForecastTable
 from hermes.flows.forecast_runner import forecast_runner
+from hermes.repositories.project import (ForecastSeriesRepository,
+                                         ModelConfigRepository,
+                                         ProjectRepository)
 from hermes.repositories.results import ModelResultRepository
 from hermes.schemas import EInput
+from hermes.tests.data_factories import TestDataFactory
 
 MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'data')
@@ -30,14 +34,6 @@ class TestDefaultModelRun:
                        # Fixtures
                        session,
                        prefect):
-
-        # Create test data specifically configured for this test
-        from datetime import timedelta
-
-        from hermes.repositories.project import (ForecastSeriesRepository,
-                                                 ModelConfigRepository,
-                                                 ProjectRepository)
-        from hermes.tests.data_factories import TestDataFactory
 
         # Create project
         project = TestDataFactory.create_project(name='test_project')
@@ -68,7 +64,7 @@ class TestDefaultModelRun:
         mock_session_fc.return_value.__enter__.return_value = session
         mock_session_t.return_value.__enter__.return_value = session
         mock_session_fs.return_value.__enter__.return_value = session
-        mock_session_m.return_value = session
+        mock_session_m.return_value.__enter__.return_value = session
         mock_get_catalog().get_quakeml.return_value = catalog
 
         asyncio.run(forecast_runner(forecastseries.oid,
