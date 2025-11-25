@@ -63,6 +63,7 @@ dev = [
     "flake8",
     "isort",
     "pyarrow",
+    "pytest-asyncio",
     "pytest-cov",
     "pytest",
     "setuptools-scm",

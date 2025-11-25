@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -24,7 +25,7 @@ def list():
 
     for fs in fseries:
         scheduler = ForecastSeriesScheduler(fs.oid)
-        if scheduler.schedule_exists:
+        if asyncio.run(scheduler.check_schedule_exists()):
             fs_with_schedule.append(fs)
 
     if not fs_with_schedule:
@@ -50,7 +51,7 @@ def show(
     try:
         forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
-        exists = scheduler.schedule_exists
+        exists = asyncio.run(scheduler.check_schedule_exists())
         fs_config = scheduler.schedule_info
     except ValueError as e:
         console.print(str(e))
@@ -86,7 +87,7 @@ def create(
     try:
         forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
-        scheduler.create(schedule_config)
+        asyncio.run(scheduler.create(schedule_config))
 
         console.print(
             f'Successfully created schedule for "{forecastseries}".')
@@ -106,7 +107,7 @@ def delete(
         forecastseries_oid = get_forecastseries_oid(forecastseries)
 
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
-        scheduler.delete_schedule()
+        asyncio.run(scheduler.delete_schedule())
         console.print(
             f'Successfully deleted schedule for "{forecastseries}".')
     except BaseException as e:
@@ -124,7 +125,7 @@ def activate(
     try:
         forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
-        scheduler.update_status(active=True)
+        asyncio.run(scheduler.update_status(active=True))
 
         console.print(
             f'Successfully activated schedule for "{forecastseries}".')
@@ -143,7 +144,7 @@ def deactivate(
     try:
         forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
-        scheduler.update_status(active=False)
+        asyncio.run(scheduler.update_status(active=False))
 
         console.print(
             f'Successfully deactivated schedule for "{forecastseries}".')
@@ -169,7 +170,7 @@ def catchup(
     try:
         forecastseries_oid = get_forecastseries_oid(forecastseries)
         scheduler = ForecastSeriesScheduler(forecastseries_oid)
-        scheduler.run_past_forecasts(mode)
+        asyncio.run(scheduler.run_past_forecasts(mode))
     except BaseException as e:
         console.print(str(e))
         raise typer.Exit(code=1)
