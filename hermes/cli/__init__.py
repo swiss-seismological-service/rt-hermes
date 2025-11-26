@@ -1,6 +1,5 @@
 import typer
 
-from hermes.cli.config_cli import app as config
 from hermes.cli.database import app as database
 from hermes.cli.forecast import app as forecast
 from hermes.cli.forecastseries import app as forecastseries
@@ -27,4 +26,3 @@ app.add_typer(forecast, name="forecasts")
 app.add_typer(schedule, name="schedules")
 app.add_typer(injectionplan, name="injectionplans")
 app.add_typer(database, name="db")
-app.add_typer(config, name="config")
