@@ -6,7 +6,7 @@ from alembic.config import Config
 from alembic.runtime import migration
 
 import hermes.datamodel.alembic
-from hermes.repositories.database import _check_tables_exist, engine
+from hermes.repositories.database import _check_tables_exist, get_engine
 
 
 def get_alembic_config() -> Config:
@@ -23,7 +23,7 @@ ALEMBIC_CFG = get_alembic_config()
 
 def check_current_head(alembic_cfg) -> bool:
     directory = script.ScriptDirectory.from_config(alembic_cfg)
-    with engine.begin() as connection:
+    with get_engine().begin() as connection:
         context = migration.MigrationContext.configure(connection)
         return set(context.get_current_heads()) == set(directory.get_heads())
 

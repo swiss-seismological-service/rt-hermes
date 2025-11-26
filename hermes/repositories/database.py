@@ -1,4 +1,3 @@
-
 import pandas as pd
 from sqlalchemy import Select
 from sqlalchemy import create_engine as _create_engine
@@ -8,14 +7,15 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.schema import MetaData
 from sqlalchemy.sql import text
 
-from hermes.config import get_settings
 from hermes.datamodel.base import ORMBase
 
-settings = get_settings()
 EXTENSIONS = ['postgis', 'postgis_topology']
 
+_engine: Engine | None = None
+_SessionFactory: sessionmaker | None = None
 
-def create_extensions(engine):
+
+def create_extensions(engine: Engine) -> None:
     with engine.connect() as conn:
         for extension in EXTENSIONS:
             conn.execute(
@@ -24,32 +24,78 @@ def create_extensions(engine):
 
 
 def create_engine(url: URL, **kwargs) -> Engine:
-    _engine = _create_engine(
+    from hermes.config import get_settings
+    settings = get_settings()
+    engine = _create_engine(
         url,
         future=True,
         pool_size=settings.POSTGRES_POOL_SIZE,
         max_overflow=settings.POSTGRES_MAX_OVERFLOW,
         **kwargs,
     )
-    create_extensions(_engine)
+    create_extensions(engine)
+    return engine
+
+
+def get_engine() -> Engine:
+    """
+    Get or create the database engine.
+
+    Engine is created lazily on first access, allowing workers to
+    load credentials from Prefect Blocks at runtime.
+    """
+    global _engine
+    if _engine is None:
+        from hermes.config import get_settings
+        settings = get_settings()
+        _engine = _create_engine(
+            settings.SQLALCHEMY_DATABASE_URL,
+            future=True,
+            pool_size=settings.POSTGRES_POOL_SIZE,
+            max_overflow=settings.POSTGRES_MAX_OVERFLOW,
+        )
+        create_extensions(_engine)
     return _engine
 
 
-engine = create_engine(settings.SQLALCHEMY_DATABASE_URL)
-DatabaseSession = sessionmaker(engine, expire_on_commit=True)
+def reset_engine() -> None:
+    """
+    Reset the database engine.
+
+    Call this after credential rotation to force reconnection
+    with new credentials on next database access.
+    """
+    global _engine, _SessionFactory
+    if _engine is not None:
+        _engine.dispose()
+    _engine = None
+    _SessionFactory = None
+
+
+def DatabaseSession() -> Session:
+    """
+    Get a new database session.
+
+    Returns:
+        SQLAlchemy Session instance
+    """
+    global _SessionFactory
+    if _SessionFactory is None:
+        _SessionFactory = sessionmaker(get_engine(), expire_on_commit=True)
+    return _SessionFactory()
 
 
 def _create_tables():
-    ORMBase.metadata.create_all(engine)
+    ORMBase.metadata.create_all(get_engine())
 
 
 def _drop_tables():
     m = MetaData()
-    m.reflect(engine, schema='public')
+    m.reflect(get_engine(), schema='public')
     tables = [
         table for table in m.sorted_tables if table.name not in
         ['spatial_ref_sys']]
-    m.drop_all(engine, tables=tables)
+    m.drop_all(get_engine(), tables=tables)
 
 
 def _check_tables_exist():
@@ -59,7 +105,7 @@ def _check_tables_exist():
     tables, the database is initialized.
     """
     m = MetaData()
-    m.reflect(engine, schema='public')
+    m.reflect(get_engine(), schema='public')
     tables = [table for table in m.sorted_tables]
     return len(tables) > 5
 

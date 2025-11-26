@@ -11,7 +11,13 @@ console = Console()
 
 
 @app.command(help="Initialize Database Tables.")
-def init():
+def init(
+    set_credentials: bool = typer.Option(
+        True,
+        "--set-credentials/--no-set-credentials",
+        help="Save credentials to Prefect Block for distributed workers"
+    )
+):
     if _check_tables_exist():
         console.print("Tables already exist.")
         return
@@ -21,6 +27,23 @@ def init():
     command.ensure_version(ALEMBIC_CFG)
     command.stamp(ALEMBIC_CFG, "schema@head")
     command.upgrade(ALEMBIC_CFG, "utils@head")
+
+    console.print("Database initialized.")
+
+    if set_credentials:
+        from hermes.cli.config_cli import _save_credentials_to_block
+        from hermes.config import get_settings
+
+        console.print()
+        if _save_credentials_to_block("hermes-db", overwrite=True):
+            settings = get_settings()
+            console.print("Credentials saved to Prefect Block 'hermes-db'")
+            console.print(
+                f"  Host: {settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}")
+            console.print(f"  Database: {settings.POSTGRES_DB}")
+        else:
+            console.print(
+                "[yellow]Warning:[/yellow] Failed to save credentials")
 
 
 @app.command(help="Drop Database Tables.")
