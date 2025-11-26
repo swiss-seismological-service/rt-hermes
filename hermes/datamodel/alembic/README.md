@@ -27,14 +27,26 @@ hermes db downgrade -y
 ```
 
 ## Migrations
-To create a new migration you can use the following command:
+To use the `alembic` CLI directly, you need to specify the config file location:
 
 ```bash
-# Create a new migration for the utils branch.
+# Set the config path (or add to .env)
+export ALEMBIC_CONFIG=hermes/datamodel/alembic/alembic.ini
+
+# View current branches and revisions
+alembic branches
+alembic history
+
+# Create a new migration for the utils branch
 alembic revision --autogenerate -m "your message here" --head=utils@head
 
-# Create a new migration for the schema branch.
+# Create a new migration for the schema branch
 alembic revision --autogenerate -m "your message here" --head=schema@head
+```
+
+Alternatively, use the `-c` flag for each command:
+```bash
+alembic -c hermes/datamodel/alembic/alembic.ini branches
 ```
 
 Please be extremely careful to always specify the correct head for the branch you are working on, otherwise you might end up with a migration that is not applied, or erroneously applied in case of a fresh database instantiation.
