@@ -1,6 +1,6 @@
 source env/bin/activate
-hermes db purge
-hermes db init
+hermes db downgrade -y
+hermes db initialize
 hermes projects create project_induced --config examples/induced/project.json
 hermes forecastseries create fs_induced --config examples/induced/forecastseries.json --project project_induced
 hermes injectionplans create double --forecastseries fs_induced --file examples/induced/multiply_template.json

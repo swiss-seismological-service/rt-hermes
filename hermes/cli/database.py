@@ -54,8 +54,8 @@ def _save_credentials_to_block(block_name: str,
         return False
 
 
-@app.command(help="Initialize Database Tables.")
-def init(
+@app.command("initialize", help="Initialize database tables.")
+def initialize(
     set_credentials: bool = typer.Option(
         True,
         "--set-credentials/--no-set-credentials",
@@ -88,20 +88,48 @@ def init(
                 "[yellow]Warning:[/yellow] Failed to save credentials")
 
 
-@app.command(help="Drop Database Tables.")
-def purge():
-    command.downgrade(ALEMBIC_CFG, "utils@base")
-    _drop_tables()
+@app.command("downgrade", help="Downgrade database tables.")
+def downgrade(
+    revision: str = typer.Argument(
+        None,
+        help="Target revision (e.g., 'schema@-1', 'utils@base', or revision id). "
+             "If not specified, drops all tables (requires -y flag)."
+    ),
+    yes: bool = typer.Option(
+        False,
+        "-y",
+        help="Confirm dropping all tables when no revision is specified."
+    )
+):
+    if revision:
+        command.downgrade(ALEMBIC_CFG, revision)
+    elif yes:
+        command.downgrade(ALEMBIC_CFG, "utils@base")
+        _drop_tables()
+        console.print("Database tables dropped.")
+    else:
+        console.print(
+            "This will drop all database tables. "
+            "Use -y to confirm, or specify a revision to downgrade to."
+        )
+        raise typer.Exit(code=1)
 
 
-@app.command(help="Upgrade Database Tables.")
-def upgrade():
-
+@app.command("upgrade", help="Upgrade database tables.")
+def upgrade(
+    revision: str = typer.Argument(
+        None,
+        help="Target revision (e.g., 'schema@head', 'utils@+1', or revision id). "
+             "If not specified, upgrades both branches to head."
+    )
+):
     if not _check_tables_exist():
         console.print("Please initialize the database first.")
         return
 
-    if not check_current_head(ALEMBIC_CFG):
+    if revision:
+        command.upgrade(ALEMBIC_CFG, revision)
+    elif not check_current_head(ALEMBIC_CFG):
         command.upgrade(ALEMBIC_CFG, "schema@head")
         command.upgrade(ALEMBIC_CFG, "utils@head")
     else:

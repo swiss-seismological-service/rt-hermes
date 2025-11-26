@@ -9,13 +9,21 @@ To instantiate, upgrade and run the database you can use the __hermes__ cli:
 
 ```bash
 # Initialize the database to the latest version.
-hermes db init
+hermes db initialize
 
 # Upgrade the database to the latest version if it's not already.
 hermes db upgrade
 
-# remove all data, tables and other database objects.
-hermes db purge
+# Upgrade a specific branch or to a specific revision.
+hermes db upgrade schema@head
+hermes db upgrade utils@+1
+
+# Downgrade a specific branch or to a specific revision.
+hermes db downgrade schema@-1
+hermes db downgrade utils@base
+
+# Remove all data, tables and other database objects.
+hermes db downgrade -y
 ```
 
 ## Migrations

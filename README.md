@@ -109,9 +109,9 @@ Update the absolute path `fdsnws_url` in the `examples/induced/forecastseries.js
 
 ### 3.2 Initialize the database
 ```
-hermes db init
+hermes db initialize
 ```
-This only needs to be done once. In case you want to delete all data and start from scratch, you can run `hermes db purge` and then `hermes db init` again.
+This only needs to be done once. In case you want to delete all data and start from scratch, you can run `hermes db downgrade -y` and then `hermes db initialize` again.
 
 ### 3.3 Load an example configuration
 ```
