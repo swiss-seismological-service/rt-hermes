@@ -99,6 +99,7 @@ def upgrade():
 
     if not _check_tables_exist():
         console.print("Please initialize the database first.")
+        return
 
     if not check_current_head(ALEMBIC_CFG):
         command.upgrade(ALEMBIC_CFG, "schema@head")
