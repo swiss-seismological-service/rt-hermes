@@ -92,8 +92,8 @@ def initialize(
 def downgrade(
     revision: str = typer.Argument(
         None,
-        help="Target revision (e.g., 'schema@-1', 'utils@base', or revision id). "
-             "If not specified, drops all tables (requires -y flag)."
+        help="Target revision (e.g., 'schema@-1', 'utils@base', or revision "
+             "id). If not specified, drops all tables (requires -y flag)."
     ),
     yes: bool = typer.Option(
         False,
@@ -119,8 +119,8 @@ def downgrade(
 def upgrade(
     revision: str = typer.Argument(
         None,
-        help="Target revision (e.g., 'schema@head', 'utils@+1', or revision id). "
-             "If not specified, upgrades both branches to head."
+        help="Target revision (e.g., 'schema@head', 'utils@+1', or revision "
+             "id). If not specified, upgrades both branches to head."
     )
 ):
     if not _check_tables_exist():
