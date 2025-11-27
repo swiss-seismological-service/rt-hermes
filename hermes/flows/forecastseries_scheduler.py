@@ -481,8 +481,8 @@ async def get_existing_deployment_schedules(
     """
     Fetch existing schedules from a Prefect deployment.
 
-    Returns full DeploymentSchedule objects (containing both .schedule and .id),
-    or None if the deployment doesn't exist or has no schedules.
+    Returns full DeploymentSchedule objects, or None if the deployment
+    doesn't exist or has no schedules.
     """
     async with get_client() as client:
         try:
