@@ -68,13 +68,19 @@ source env/bin/activate
 pip install -U pip wheel setuptools
 ```
 
-#### 2.2.2 Install HERMES
+#### 2.2.2 Dependencies
+Possibly, the following system dependencies are required to install some of the Python dependencies. On a Debian-based system, you can install them using:
+```
+sudo apt-get install build-essential libpq-dev python3-dev
+```
+
+#### 2.2.3 Install HERMES
 Install Hermes from the Python Package Index
 ```
 pip install rt-hermes
 ```
 
-### 2.2.3 Configure the environment file
+### 2.2.4 Configure the environment file
 For HERMES to find the correct Prefect Server and PostgreSQL database, you need to create a `.env` file in the root of your project. You can use the example file provided in the repository:
 
 ```
@@ -83,11 +89,11 @@ cp ../rt-hermes/.env.example .env
 ```
 Use the credentials defined in section [2.1](#21-installation-of-the-services) or the ones provided to you by your admin.
 
-#### 2.2.4 Use the CLI
+#### 2.2.5 Use the CLI
 The main usage of HERMES is currently via CLI
 
 
-#### 2.2.5 Install the models
+#### 2.2.6 Install the models
 To run models, you need to have them installed locally. You can, for example, clone them into a subdirectory and install from there.
 ```
 git clone https://gitlab.seismo.ethz.ch/indu/em1.git models/em1
