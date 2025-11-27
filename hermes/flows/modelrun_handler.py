@@ -24,19 +24,20 @@ from hermes.services.result_service import (save_forecast_catalog,
 def on_modelrun_completed(flow: Flow, flow_run: FlowRun, state: State) -> None:
     """Update ModelRun status to COMPLETED when flow succeeds."""
     modelrun = flow_run.parameters.get('modelrun')
-    if modelrun and hasattr(modelrun, 'oid'):
+
+    if modelrun and modelrun.get('oid', None):
         with DatabaseSession() as session:
             ModelRunRepository.update_status(
-                session, modelrun.oid, EStatus.COMPLETED)
+                session, modelrun['oid'], EStatus.COMPLETED)
 
 
 def on_modelrun_failed(flow: Flow, flow_run: FlowRun, state: State) -> None:
     """Update ModelRun status to FAILED when flow fails."""
     modelrun = flow_run.parameters.get('modelrun')
-    if modelrun and hasattr(modelrun, 'oid'):
+    if modelrun and modelrun.get('oid', None):
         with DatabaseSession() as session:
             ModelRunRepository.update_status(
-                session, modelrun.oid, EStatus.FAILED)
+                session, modelrun['oid'], EStatus.FAILED)
 
 
 class ModelRunDataAccess:
