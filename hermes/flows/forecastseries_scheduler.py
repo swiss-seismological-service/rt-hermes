@@ -11,6 +11,9 @@ from prefect.client.schemas.schedules import RRuleSchedule
 from prefect.deployments import run_deployment
 
 from hermes.flows.forecast_runner import forecast_runner
+from hermes.flows.forecastseries_deployment import (DEPLOYMENT_NAME,
+                                                    deployment_active,
+                                                    deployment_exists)
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastSeriesRepository
 from hermes.schemas.project_schemas import (ForecastSeries,
@@ -30,9 +33,6 @@ class ForecastSeriesAttr:
 
     def __set__(self, instance, value):
         setattr(instance.forecastseries, self._name, value)
-
-
-DEPLOYMENT_NAME = 'ForecastRunner/{}'
 
 
 class ForecastSeriesScheduler:
@@ -449,45 +449,3 @@ async def delete_deployment_schedule(
             deployment_id=deployment.id,
             schedule_id=schedule_id
         )
-
-
-async def deployment_exists(
-        deployment_name: str) -> bool:
-    """
-    Check if a deployment exists by its name.
-    """
-    async with get_client() as client:
-        try:
-            await client.read_deployment_by_name(deployment_name)
-            return True
-        except Exception:
-            return False
-
-
-async def deployment_active(
-        deployment_name: str) -> bool:
-    """
-    Check if a deployment is active by its name.
-    """
-    async with get_client() as client:
-        deployment = await client.read_deployment_by_name(deployment_name)
-        if deployment.status.value == 'NOT_READY' or deployment.paused is True:
-            return False
-        return True
-
-
-async def get_existing_deployment_schedules(
-        deployment_name: str) -> list[DeploymentSchedule] | None:
-    """
-    Fetch existing schedules from a Prefect deployment.
-
-    Returns full DeploymentSchedule objects, or None if the deployment
-    doesn't exist or has no schedules.
-    """
-    async with get_client() as client:
-        try:
-            deployment = await client.read_deployment_by_name(deployment_name)
-            schedules = await client.read_deployment_schedules(deployment.id)
-            return schedules if schedules else None
-        except Exception:
-            return None

@@ -1,24 +1,14 @@
 import asyncio
-import logging
 from uuid import UUID
 
-from prefect.exceptions import ObjectNotFound
-from prefect.runner import Runner
-
-from hermes.flows.forecast_runner import forecast_runner
-from hermes.flows.forecastseries_scheduler import (
-    DEPLOYMENT_NAME,
-    delete_deployment_schedule,
-    get_existing_deployment_schedules)
-from hermes.flows.modelrun_handler import default_model_runner
+from hermes.flows.forecastseries_deployment import DEPLOYMENT_NAME
+from hermes.flows.forecastseries_scheduler import delete_deployment_schedule
 from hermes.repositories.data import InjectionPlanRepository
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import (ForecastRepository,
                                          ForecastSeriesRepository)
 from hermes.repositories.types import DuplicateError
 from hermes.schemas import EStatus, ForecastSeriesConfig
-
-logger = logging.getLogger('prefect.hermes')
 
 
 def get_forecastseries_oid(name_or_id: str):
@@ -126,7 +116,7 @@ def delete_forecastseries(forecastseries_oid: UUID):
             asyncio.run(delete_deployment_schedule(
                 DEPLOYMENT_NAME.format(forecastseries_oid),
                 forecastseries.schedule_id))
-        except ObjectNotFound:
+        except Exception:
             # schedule has already been deleted on prefect side
             pass
 
@@ -144,59 +134,3 @@ def delete_forecastseries(forecastseries_oid: UUID):
         # deleted by the cascade
         for ip in injectionplans:
             InjectionPlanRepository.delete(session, ip)
-
-
-def serve_forecastseries(forecastseries_oid: UUID, concurrency_limit: int = 3):
-    """
-    Serve a ForecastSeries by creating deployments and starting a runner.
-
-    Preserves existing schedules from the Prefect server across restarts
-    and updates the schedule_id in the database if it changes.
-    """
-    with DatabaseSession() as session:
-        forecastseries = ForecastSeriesRepository.get_by_id(
-            session, forecastseries_oid)
-
-    if not forecastseries:
-        raise ValueError(
-            f'ForecastSeries with oid "{forecastseries_oid}" not found.')
-
-    # Fetch existing schedules from Prefect server to preserve them
-    deployment_name = DEPLOYMENT_NAME.format(forecastseries.name)
-    existing_schedules = asyncio.run(
-        get_existing_deployment_schedules(deployment_name))
-
-    # Extract schedule objects for to_deployment()
-    schedules_for_deployment = None
-    if existing_schedules:
-        logger.info(
-            f"Preserving {len(existing_schedules)} existing schedule(s).")
-        schedules_for_deployment = [s.schedule for s in existing_schedules]
-
-    forecast_deployment = forecast_runner.to_deployment(
-        name=forecastseries.name,
-        parameters={"forecastseries_oid": str(forecastseries_oid)},
-        concurrency_limit=concurrency_limit,
-        schedules=schedules_for_deployment)
-
-    modelrun_deployment = default_model_runner.to_deployment(
-        name=forecastseries.name,
-        concurrency_limit=concurrency_limit)
-
-    # Use Runner directly to have control over deployment creation
-    runner = Runner(pause_on_shutdown=False)
-    runner.add_deployment(forecast_deployment)
-    runner.add_deployment(modelrun_deployment)
-
-    # Update DB with new schedule ID (if schedules were preserved)
-    if existing_schedules:
-        new_schedules = asyncio.run(
-            get_existing_deployment_schedules(deployment_name))
-        if new_schedules:
-            with DatabaseSession() as session:
-                ForecastSeriesRepository.update_schedule_id(
-                    session, forecastseries_oid, new_schedules[0].id)
-
-    # Start the runner (blocking)
-    logger.info(f"Starting runner for '{forecastseries.name}'")
-    asyncio.run(runner.start())

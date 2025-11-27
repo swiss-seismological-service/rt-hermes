@@ -6,13 +6,13 @@ from rich.console import Console
 from typing_extensions import Annotated
 
 from hermes.cli.utils import console_table, console_tree
+from hermes.flows.forecastseries_deployment import serve_forecastseries
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastSeriesRepository
 from hermes.schemas.project_schemas import ForecastSeriesConfig
 from hermes.services.forecastseries_service import (create_forecastseries,
                                                     delete_forecastseries,
                                                     get_forecastseries_oid,
-                                                    serve_forecastseries,
                                                     update_forecastseries)
 from hermes.services.project_service import get_project_oid
 
