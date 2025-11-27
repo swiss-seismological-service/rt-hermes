@@ -61,6 +61,7 @@ class TestSettingsCredentialSource:
         """Test that CREDENTIAL_SOURCE=env uses environment variables."""
         monkeypatch.setenv("CREDENTIAL_SOURCE", "env")
         monkeypatch.setenv("POSTGRES_HOST", "envhost")
+        monkeypatch.setenv("POSTGRES_HOST_EXTERNAL", "envhostexternal")
         monkeypatch.setenv("POSTGRES_PORT", "5555")
         monkeypatch.setenv("POSTGRES_USER", "envuser")
         monkeypatch.setenv("POSTGRES_PASSWORD", "envpass")

@@ -33,7 +33,7 @@ def _save_credentials_to_block(block_name: str,
         return False
 
     block = HermesDatabaseCredentials(
-        host=settings.POSTGRES_HOST,
+        host=settings.POSTGRES_HOST_EXTERNAL,
         port=int(settings.POSTGRES_PORT),
         user=settings.POSTGRES_USER,
         password=settings.POSTGRES_PASSWORD,
@@ -81,7 +81,8 @@ def initialize(
             settings = get_settings()
             console.print(f"Credentials saved to Prefect Block '{BLOCK_NAME}'")
             console.print(
-                f"  Host: {settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}")
+                f"  Host: {settings.POSTGRES_HOST_EXTERNAL}:"
+                f"{settings.POSTGRES_PORT}")
             console.print(f"  Database: {settings.POSTGRES_DB}")
         else:
             console.print(
@@ -157,7 +158,8 @@ def set_credentials(
     if _save_credentials_to_block(BLOCK_NAME, overwrite):
         console.print(f"Credentials saved to Prefect Block '{BLOCK_NAME}'")
         console.print(
-            f"  Host: {settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}")
+            f"  Host: {settings.POSTGRES_HOST_EXTERNAL}:"
+            f"{settings.POSTGRES_PORT}")
         console.print(f"  Database: {settings.POSTGRES_DB}")
         console.print(f"  User: {settings.POSTGRES_USER}")
         console.print()

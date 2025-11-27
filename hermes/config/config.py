@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # Local database credentials (used when CREDENTIAL_SOURCE='env')
     POSTGRES_HOST: str = 'localhost'
+    POSTGRES_HOST_EXTERNAL: str = 'localhost'
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = 'postgres'
     POSTGRES_PASSWORD: str | None = None
