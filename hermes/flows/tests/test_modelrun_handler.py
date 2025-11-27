@@ -1,8 +1,12 @@
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
+from prefect.client.schemas.objects import FlowRun
+
 from hermes.flows.modelrun_handler import (ModelRunDataAccess,
+                                           _update_modelrun_status,
                                            default_model_runner)
+from hermes.repositories.results import ModelRunRepository
 from hermes.schemas import DBModelRunInfo
 from hermes.schemas.base import EStatus
 from hermes.schemas.result_schemas import ModelRun
@@ -79,3 +83,66 @@ class TestDefaultModelRunner:
             flows_scenario.model_config.result_type,
             "test_results"
         )
+
+
+class TestUpdateModelrunStatus:
+    """Test the _update_modelrun_status helper function."""
+
+    def _make_flow_run(self, modelrun_param):
+        """Create a mock FlowRun with given modelrun parameter."""
+        flow_run = MagicMock(spec=FlowRun)
+        flow_run.parameters = {'modelrun': modelrun_param}
+        return flow_run
+
+    @patch('hermes.flows.modelrun_handler.DatabaseSession')
+    def test_updates_status_with_dict_parameter(
+            self, mock_db_session, session, flows_scenario):
+        """Test status update."""
+        mock_db_session.return_value.__enter__.return_value = session
+
+        # Simulate Prefect's dict deserialization of modelrun
+        modelrun_dict = {'oid': str(flows_scenario.modelrun.oid)}
+
+        flow_run = self._make_flow_run(modelrun_dict)
+        _update_modelrun_status(flow_run, EStatus.COMPLETED)
+
+        # Verify the status was updated in the database
+        updated = ModelRunRepository.get_by_id(
+            session, flows_scenario.modelrun.oid)
+        assert updated.status == EStatus.COMPLETED
+
+    @patch('hermes.flows.modelrun_handler.DatabaseSession')
+    def test_does_nothing_when_modelrun_is_none(self, mock_db_session):
+        """Test graceful handling when modelrun parameter is missing."""
+        flow_run = self._make_flow_run(None)
+
+        # Should not raise, should not call DatabaseSession
+        _update_modelrun_status(flow_run, EStatus.COMPLETED)
+
+        mock_db_session.assert_not_called()
+
+    @patch('hermes.flows.modelrun_handler.DatabaseSession')
+    def test_does_nothing_when_oid_is_none(self, mock_db_session):
+        """Test graceful handling when modelrun has no oid."""
+        flow_run = self._make_flow_run({'oid': None})
+
+        # Should not raise, should not call DatabaseSession
+        _update_modelrun_status(flow_run, EStatus.COMPLETED)
+
+        mock_db_session.assert_not_called()
+
+    @patch('hermes.flows.modelrun_handler.DatabaseSession')
+    def test_logs_error_on_db_failure(self, mock_db_session, caplog):
+        """Test that database errors are logged but not raised."""
+        mock_db_session.return_value.__enter__.side_effect = \
+            Exception("DB connection failed")
+
+        modelrun_oid = uuid4()
+        flow_run = self._make_flow_run({'oid': str(modelrun_oid)})
+
+        # Should not raise
+        _update_modelrun_status(flow_run, EStatus.FAILED)
+
+        # Should log the error
+        assert "Failed to update ModelRun" in caplog.text
+        assert str(modelrun_oid) in caplog.text

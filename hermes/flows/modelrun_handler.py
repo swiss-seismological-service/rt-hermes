@@ -21,23 +21,45 @@ from hermes.services.result_service import (save_forecast_catalog,
                                             save_forecast_grrategrid)
 
 
+def _update_modelrun_status(flow_run: FlowRun, status: EStatus) -> None:
+    """
+    Safely update ModelRun status with error handling.
+
+    Logs errors but doesn't raise to avoid breaking the hook chain.
+    """
+    logger = logging.getLogger('prefect.hermes')
+    modelrun = flow_run.parameters.get('modelrun')
+    modelrun_oid = modelrun.get('oid') if modelrun else None
+
+    if not modelrun_oid:
+        return
+
+    try:
+        with DatabaseSession() as session:
+            ModelRunRepository.update_status(session, modelrun_oid, status)
+    except Exception as e:
+        logger.error(
+            f"Failed to update ModelRun {modelrun_oid} to {status}: {e}")
+
+
 def on_modelrun_completed(flow: Flow, flow_run: FlowRun, state: State) -> None:
     """Update ModelRun status to COMPLETED when flow succeeds."""
-    modelrun = flow_run.parameters.get('modelrun')
-
-    if modelrun and modelrun.get('oid', None):
-        with DatabaseSession() as session:
-            ModelRunRepository.update_status(
-                session, modelrun['oid'], EStatus.COMPLETED)
+    _update_modelrun_status(flow_run, EStatus.COMPLETED)
 
 
 def on_modelrun_failed(flow: Flow, flow_run: FlowRun, state: State) -> None:
     """Update ModelRun status to FAILED when flow fails."""
-    modelrun = flow_run.parameters.get('modelrun')
-    if modelrun and modelrun.get('oid', None):
-        with DatabaseSession() as session:
-            ModelRunRepository.update_status(
-                session, modelrun['oid'], EStatus.FAILED)
+    _update_modelrun_status(flow_run, EStatus.FAILED)
+
+
+def on_modelrun_crashed(flow: Flow, flow_run: FlowRun, state: State) -> None:
+    """Update ModelRun status to FAILED when flow crashes."""
+    _update_modelrun_status(flow_run, EStatus.FAILED)
+
+
+def on_modelrun_cancelled(flow: Flow, flow_run: FlowRun, state: State) -> None:
+    """Update ModelRun status to CANCELLED when flow is cancelled by user."""
+    _update_modelrun_status(flow_run, EStatus.CANCELLED)
 
 
 class ModelRunDataAccess:
@@ -106,7 +128,9 @@ class ModelRunDataAccess:
 @flow(name='DefaultModelRunner',
       flow_run_name='ModelRun-{modelconfig.name}',
       on_completion=[on_modelrun_completed],
-      on_failure=[on_modelrun_failed])
+      on_failure=[on_modelrun_failed],
+      on_crashed=[on_modelrun_crashed],
+      on_cancellation=[on_modelrun_cancelled])
 def default_model_runner(modelrun_info: DBModelRunInfo,
                          modelconfig: ModelConfig,
                          modelrun: ModelRun) -> None:

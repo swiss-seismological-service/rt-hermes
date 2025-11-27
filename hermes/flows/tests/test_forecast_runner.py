@@ -72,6 +72,43 @@ class TestForecastRunner:
         assert forecast.injection_observation is not None
         assert forecast.seismicity_observation is not None
 
+    @flow
+    def test_model_failure_sets_forecast_failed(
+            self,
+            forecast_service_session: MagicMock,
+            forecast_tasks_session: MagicMock,
+            forecast_runner_session: MagicMock,
+            mock_get_injection: MagicMock,
+            mock_get_catalog: MagicMock,
+            mock_default_model_runner: MagicMock,
+            session,
+            flows_scenario_with_injection,
+            prefect_with_logs):
+        """Test that forecast status is FAILED when model raises exception."""
+        # Configure all DatabaseSession mocks to use test session
+        forecast_service_session.return_value.__enter__.return_value = session
+        forecast_tasks_session.return_value.__enter__.return_value = session
+        forecast_runner_session.return_value.__enter__.return_value = session
+
+        # Mock external API responses
+        mock_get_catalog().get_quakeml.return_value = SEISMICITY
+        mock_get_injection().get_json.return_value = INJECTION
+
+        # Make model runner fail
+        mock_default_model_runner.side_effect = Exception("Model crashed")
+
+        # Execute the flow
+        forecast = asyncio.run(forecast_runner(
+            flows_scenario_with_injection.forecastseries.oid,
+            starttime=datetime(2022, 4, 21, 14, 50, 0),
+            endtime=datetime(2022, 4, 21, 14, 55, 0),
+            mode='local'
+        ))
+
+        # Verify the forecast status is FAILED
+        assert forecast.status == EStatus.FAILED
+        assert mock_default_model_runner.call_count == 1
+
 
 def test_prepare_model_runs(flows_scenario):
     runs = prepare_model_runs(

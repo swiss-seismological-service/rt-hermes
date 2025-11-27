@@ -334,11 +334,12 @@ async def _execute_deployed_models(
             wait_for_flow_run(flow_run_id=fr.id) for fr, _ in flow_runs
         ])
 
-        # Count failures
+        # Count failures (including crashed and cancelled)
         failed_count = 0
         for finished_run, (_, modelrun) in zip(finished_runs, flow_runs):
-            if finished_run.state.is_failed():
-                logger.error(f"ModelRun {modelrun.oid} failed")
+            state = finished_run.state
+            if state.is_failed() or state.is_crashed() or state.is_cancelled():
+                logger.error(f"ModelRun {modelrun.oid} {state.name}")
                 failed_count += 1
 
     return failed_count

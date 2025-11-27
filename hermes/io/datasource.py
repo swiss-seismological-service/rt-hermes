@@ -13,7 +13,6 @@ T = TypeVar('T')
 
 
 class DataSource(ABC, Generic[T]):
-    @task(name='DataSource')
     def __init__(self,
                  data: T | None = None) \
             -> None:
