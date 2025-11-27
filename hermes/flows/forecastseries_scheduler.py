@@ -474,3 +474,20 @@ async def deployment_active(
         if deployment.status.value == 'NOT_READY' or deployment.paused is True:
             return False
         return True
+
+
+async def get_existing_deployment_schedules(
+        deployment_name: str) -> list[DeploymentSchedule] | None:
+    """
+    Fetch existing schedules from a Prefect deployment.
+
+    Returns full DeploymentSchedule objects (containing both .schedule and .id),
+    or None if the deployment doesn't exist or has no schedules.
+    """
+    async with get_client() as client:
+        try:
+            deployment = await client.read_deployment_by_name(deployment_name)
+            schedules = await client.read_deployment_schedules(deployment.id)
+            return schedules if schedules else None
+        except Exception:
+            return None

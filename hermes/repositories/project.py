@@ -60,6 +60,15 @@ class ForecastSeriesRepository(repository_factory(
         ForecastSeries, ForecastSeriesTable)):
 
     @classmethod
+    def update_schedule_id(cls, session: Session, oid, schedule_id) -> None:
+        """Update only the schedule_id field for a ForecastSeries."""
+        q = select(ForecastSeriesTable).where(ForecastSeriesTable.oid == oid)
+        result = session.execute(q).unique().scalar_one_or_none()
+        if result and result.schedule_id != schedule_id:
+            result.schedule_id = schedule_id
+            session.commit()
+
+    @classmethod
     def get_by_name(cls, session: Session, name: str) -> ForecastSeries:
         q = select(ForecastSeriesTable).where(ForecastSeriesTable.name == name)
         result = session.execute(q).unique().scalar_one_or_none()

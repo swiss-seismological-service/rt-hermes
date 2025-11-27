@@ -2,19 +2,17 @@ import json
 from pathlib import Path
 
 import typer
-from prefect import serve as serve_fs
 from rich.console import Console
 from typing_extensions import Annotated
 
 from hermes.cli.utils import console_table, console_tree
-from hermes.flows.forecast_runner import forecast_runner
-from hermes.flows.modelrun_handler import default_model_runner
 from hermes.repositories.database import DatabaseSession
 from hermes.repositories.project import ForecastSeriesRepository
 from hermes.schemas.project_schemas import ForecastSeriesConfig
 from hermes.services.forecastseries_service import (create_forecastseries,
                                                     delete_forecastseries,
                                                     get_forecastseries_oid,
+                                                    serve_forecastseries,
                                                     update_forecastseries)
 from hermes.services.project_service import get_project_oid
 
@@ -147,23 +145,7 @@ def serve(
 ):
     try:
         forecastseries_oid = get_forecastseries_oid(forecastseries)
-
-        with DatabaseSession() as session:
-            forecastseries = ForecastSeriesRepository.get_by_id(
-                session, forecastseries_oid)
-
-        forecast_deployment = forecast_runner.to_deployment(
-            name=forecastseries.name,
-            parameters={"forecastseries_oid": str(forecastseries_oid)},
-            concurrency_limit=concurrency_limit)
-
-        modelrun_deployment = default_model_runner.to_deployment(
-            name=forecastseries.name,
-            concurrency_limit=concurrency_limit)
-
-        serve_fs(forecast_deployment, modelrun_deployment,
-                 pause_on_shutdown=False)
-
+        serve_forecastseries(forecastseries_oid, concurrency_limit)
     except Exception as e:
         console.print(str(e))
         raise typer.Exit(code=1)
