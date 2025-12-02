@@ -125,3 +125,38 @@ class TestSettingsCredentialSource:
 
         assert url.drivername == "postgresql+asyncpg"
         assert url.host == "asynchost"
+
+    @patch.object(HermesDatabaseCredentials, 'load')
+    def test_credential_source_prefect_handles_coroutine(
+        self,
+        mock_load: MagicMock,
+        monkeypatch
+    ):
+        """Test that CREDENTIAL_SOURCE=prefect handles coroutine from load().
+
+        In Prefect 3.x, Block.load() returns a coroutine in async contexts.
+        This test verifies the code handles that case correctly.
+        """
+        mock_block = HermesDatabaseCredentials(
+            host="corohost",
+            port=7777,
+            user="corouser",
+            password=SecretStr("coropass"),
+            database="corodb"
+        )
+
+        async def mock_coro():
+            return mock_block
+
+        mock_load.return_value = mock_coro()
+
+        monkeypatch.setenv("CREDENTIAL_SOURCE", "prefect")
+
+        settings = Settings()
+        url = settings.SQLALCHEMY_DATABASE_URL
+
+        mock_load.assert_called_once_with("hermes-db")
+        assert url.host == "corohost"
+        assert url.port == 7777
+        assert url.username == "corouser"
+        assert url.database == "corodb"

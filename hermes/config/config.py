@@ -1,7 +1,11 @@
+import inspect
 from typing import Literal
 
+from prefect.utilities.asyncutils import run_coro_as_sync
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL
+
+from hermes.config.blocks import HermesDatabaseCredentials
 
 
 class Settings(BaseSettings):
@@ -51,8 +55,8 @@ class Settings(BaseSettings):
         )
 
     def _get_url_from_block(self, async_driver: bool = False) -> URL:
-        from hermes.config.blocks import HermesDatabaseCredentials
-        block = HermesDatabaseCredentials.load("hermes-db")
+        result = HermesDatabaseCredentials.load("hermes-db")
+        block = run_coro_as_sync(result) if inspect.iscoroutine(result) else result
         return block.get_connection_url(async_driver=async_driver)
 
 
