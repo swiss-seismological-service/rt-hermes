@@ -1,9 +1,10 @@
 import asyncio
 import os
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
-from prefect import flow
+import pytest
+from prefect.exceptions import FailedRun
 
 from hermes.flows.forecast_runner import forecast_runner, prepare_model_runs
 from hermes.schemas.base import EStatus
@@ -18,14 +19,13 @@ with open(os.path.join(CENTRAL_DATA_LOCATION, 'quakeml.xml')) as f:
     SEISMICITY = f.read()
 
 
-@patch('hermes.flows.forecast_runner.default_model_runner', autocast=True)
-@patch('hermes.io.SeismicityDataSource.from_uri', autocast=True)
-@patch('hermes.io.HydraulicsDataSource.from_uri', autocast=True)
+@patch('hermes.flows.forecast_runner.default_model_runner', autospec=True)
+@patch('hermes.io.SeismicityDataSource.from_uri', autospec=True)
+@patch('hermes.io.HydraulicsDataSource.from_uri', autospec=True)
 @patch('hermes.flows.forecast_runner.DatabaseSession')
 @patch('hermes.flows.forecast_tasks.DatabaseSession')
 @patch('hermes.services.forecast_service.DatabaseSession')
 class TestForecastRunner:
-    @flow
     def test_full(self,
                   forecast_service_session: MagicMock,
                   forecast_tasks_session: MagicMock,
@@ -44,8 +44,8 @@ class TestForecastRunner:
         forecast_runner_session.return_value.__enter__.return_value = session
 
         # Mock external API responses
-        mock_get_catalog().get_quakeml.return_value = SEISMICITY
-        mock_get_injection().get_json.return_value = INJECTION
+        mock_get_catalog.return_value.get_quakeml.return_value = SEISMICITY
+        mock_get_injection.return_value.get_json.return_value = INJECTION
 
         # Execute the new flow
         forecast = asyncio.run(forecast_runner(
@@ -72,9 +72,11 @@ class TestForecastRunner:
         assert forecast.injection_observation is not None
         assert forecast.seismicity_observation is not None
 
-    @flow
+    @patch('hermes.flows.forecast_runner.update_forecast_status',
+           autospec=True)
     def test_model_failure_sets_forecast_failed(
             self,
+            mock_update_forecast_status: MagicMock,
             forecast_service_session: MagicMock,
             forecast_tasks_session: MagicMock,
             forecast_runner_session: MagicMock,
@@ -91,22 +93,23 @@ class TestForecastRunner:
         forecast_runner_session.return_value.__enter__.return_value = session
 
         # Mock external API responses
-        mock_get_catalog().get_quakeml.return_value = SEISMICITY
-        mock_get_injection().get_json.return_value = INJECTION
+        mock_get_catalog.return_value.get_quakeml.return_value = SEISMICITY
+        mock_get_injection.return_value.get_json.return_value = INJECTION
 
         # Make model runner fail
         mock_default_model_runner.side_effect = Exception("Model crashed")
 
         # Execute the flow
-        forecast = asyncio.run(forecast_runner(
-            flows_scenario_with_injection.forecastseries.oid,
-            starttime=datetime(2022, 4, 21, 14, 50, 0),
-            endtime=datetime(2022, 4, 21, 14, 55, 0),
-            mode='local'
-        ))
+        with pytest.raises(FailedRun):
+            asyncio.run(forecast_runner(
+                flows_scenario_with_injection.forecastseries.oid,
+                starttime=datetime(2022, 4, 21, 14, 50, 0),
+                endtime=datetime(2022, 4, 21, 14, 55, 0),
+                mode='local'
+            ))
 
-        # Verify the forecast status is FAILED
-        assert forecast.status == EStatus.FAILED
+        # called with any id and FAILED status
+        mock_update_forecast_status.assert_called_with(ANY, EStatus.FAILED)
         assert mock_default_model_runner.call_count == 1
 
 

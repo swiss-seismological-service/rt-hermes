@@ -85,7 +85,8 @@ def serve_forecastseries(forecastseries_oid: UUID, concurrency_limit: int = 3):
 
     forecast_deployment = forecast_runner.to_deployment(
         name=forecastseries.name,
-        parameters={"forecastseries_oid": str(forecastseries_oid)},
+        parameters={"forecastseries_oid": str(forecastseries_oid),
+                    "mode": "deploy"},
         concurrency_limit=concurrency_limit,
         schedules=schedules_for_deployment)
 

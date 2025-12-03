@@ -9,6 +9,7 @@ from prefect import flow, get_run_logger, runtime
 from prefect.client.orchestration import get_client
 from prefect.flow_runs import wait_for_flow_run
 from prefect.futures import wait
+from prefect.states import Completed, Failed
 
 from hermes.flows.forecast_tasks import (build_injection_plans,
                                          fetch_injection_observation,
@@ -183,18 +184,21 @@ async def forecast_runner(
             logger.info("Forecast execution completed successfully")
             forecast.status = update_forecast_status(
                 forecast.oid, EStatus.COMPLETED)
+            return Completed(message="Forecast completed successfully",
+                             data=forecast)
         else:
             logger.warning(f"Forecast completed with {failed_count} "
                            f"failed model run(s)")
             forecast.status = update_forecast_status(
                 forecast.oid, EStatus.FAILED)
+            return Failed(
+                message=f"{failed_count}/{len(model_runs)} "
+                "model run(s) failed")
 
     except Exception as e:
         logger.error(f"Forecast execution failed: {e}")
         forecast.status = update_forecast_status(forecast.oid, EStatus.FAILED)
         raise
-
-    return forecast
 
 
 def prepare_model_runs(

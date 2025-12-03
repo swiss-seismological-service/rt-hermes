@@ -56,7 +56,8 @@ class Settings(BaseSettings):
 
     def _get_url_from_block(self, async_driver: bool = False) -> URL:
         result = HermesDatabaseCredentials.load("hermes-db")
-        block = run_coro_as_sync(result) if inspect.iscoroutine(result) else result
+        block = run_coro_as_sync(result) if \
+            inspect.iscoroutine(result) else result
         return block.get_connection_url(async_driver=async_driver)
 
 
