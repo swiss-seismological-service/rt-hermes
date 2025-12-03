@@ -111,7 +111,7 @@ You can start with an example configuration and data to get a feel for how HERME
 ```
 cp -r ../rt-hermes/examples .
 ```
-Update the absolute path `fdsnws_url` in the `examples/induced/forecastseries.json` file to the path of the `examples/induced` folder.
+Update the absolute path `fdsnws_url` in `examples/induced/forecastseries.json` to your local path of the `examples/induced` folder.
 
 ### 3.2 Initialize the database
 ```
