@@ -1,52 +1,32 @@
 {
-    "description": "This is a test forecast series",
-    "tags": [
-        "test"
-    ],
-    "observation_starttime": "2022-04-21T13:00:00",
-    "bounding_polygon": {
-        "type": "Polygon",
-        "coordinates": [
-            [
-                [
-                    -125,
-                    35
-                ],
-                [
-                    -115,
-                    35
-                ],
-                [
-                    -115,
-                    40
-                ],
-                [
-                    -125,
-                    40
-                ],
-                [
-                    -125,
-                    35
-                ]
-            ]
-        ]
-    },
-    "model_settings": {
-        "well_section_id": "37801a57-90b9-4fb5-83d7-506ee9166acf",
-        "injection_point": [
-            8.47449792444771,
-            46.5098187019071,
-            1271.43402303251
-        ],
-        "local_proj_string": "epsg:2056",
-        "epoch_duration": 600,
-        "n_phases": 8
-    },
-    "depth_min": 0,
-    "depth_max": 10,
-    "seismicityobservation_required": "REQUIRED",
-    "injectionobservation_required": "REQUIRED",
-    "injectionplan_required": "REQUIRED",
-    "fdsnws_url": "file:///home/nicolas/workspaces/rt-hermes/examples/induced/quakeml.xml",
-    "hydws_url": "http://scforge.ethz.ch:8081/hydws/v1/boreholes/caf65646-8093-4aaf-989c-1c837f497667"
+  "description": "This is a test forecast series",
+  "tags": ["test"],
+  "observation_starttime": "2022-04-21T13:00:00",
+  "bounding_polygon": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [-125, 35],
+        [-115, 35],
+        [-115, 40],
+        [-125, 40],
+        [-125, 35]
+      ]
+    ]
+  },
+  "model_settings": {
+    "well_section_id": "37801a57-90b9-4fb5-83d7-506ee9166acf",
+    "injection_point": [8.47449792444771, 46.5098187019071, 1271.43402303251],
+    "local_proj_string": "epsg:2056",
+    "epoch_duration": 600,
+    "n_phases": 8,
+    "hydraulics_resample": 60
+  },
+  "depth_min": 0,
+  "depth_max": 10,
+  "seismicityobservation_required": "REQUIRED",
+  "injectionobservation_required": "REQUIRED",
+  "injectionplan_required": "REQUIRED",
+  "fdsnws_url": "file:///home/nicolas/workspaces/rt-hermes/examples/induced/quakeml.xml",
+  "hydws_url": "http://scforge.ethz.ch:8081/hydws/v1/boreholes/caf65646-8093-4aaf-989c-1c837f497667"
 }

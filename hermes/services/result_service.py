@@ -56,6 +56,8 @@ def save_forecast_grrategrid(
                         forecastseries_oid=forecastseries_oid)
     timestep = TimeStepRepository.get_or_create(session, timestep)
 
+    forecast_grrategrid['modelrun_oid'] = modelrun_oid
+
     cells = forecast_grrategrid.groupby(['longitude_min', 'longitude_max',
                                          'latitude_min', 'latitude_max',
                                          'depth_min', 'depth_max'])

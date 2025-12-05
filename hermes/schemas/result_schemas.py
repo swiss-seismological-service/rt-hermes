@@ -83,3 +83,4 @@ class GRParameters(real_value_mixin('number_events', float),
                    ):
     oid: UUID | None = None
     modelresult_oid: UUID | None = None
+    modelrun_oid: UUID | None = None

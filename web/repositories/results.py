@@ -122,23 +122,44 @@ class AsyncGRParametersRepository(
             timestep_oid: UUID | None = None
     ) -> ForecastGRRateGrid:
 
-        filter = [ModelResultTable.modelrun_oid == modelrun_oid]
-        if gridcell_oid:
-            filter.append(ModelResultTable.gridcell_oid == gridcell_oid)
-        if timestep_oid:
-            filter.append(ModelResultTable.timestep_oid == timestep_oid)
+        # Start filtering from GRParametersTable using the indexed modelrun_oid
+        filters = [GRParametersTable.modelrun_oid == modelrun_oid]
 
-        q = select(ModelResultTable.realization_id,
-                   *GRParametersTable.__table__.c,
-                   GridCellTable.depth_min,
-                   GridCellTable.depth_max,
-                   GridCellTable.geom,
-                   TimeStepTable.starttime,
-                   TimeStepTable.endtime,) \
-            .where(*filter) \
-            .join(GRParametersTable) \
-            .join(GridCellTable) \
-            .join(TimeStepTable)
+        # Optional filters still need to check ModelResultTable
+        if gridcell_oid:
+            filters.append(ModelResultTable.gridcell_oid == gridcell_oid)
+        if timestep_oid:
+            filters.append(ModelResultTable.timestep_oid == timestep_oid)
+
+        # Start the query from GRParametersTable
+        q = (
+            select(
+                ModelResultTable.realization_id,
+                # Only select the _value columns that are actually used
+                GRParametersTable.number_events_value,
+                GRParametersTable.a_value,
+                GRParametersTable.b_value,
+                GRParametersTable.mc_value,
+                GRParametersTable.alpha_value,
+                GridCellTable.depth_min,
+                GridCellTable.depth_max,
+                # Extract geometry bounds directly in SQL
+                func.ST_XMin(GridCellTable.geom).label('longitude_min'),
+                func.ST_YMin(GridCellTable.geom).label('latitude_min'),
+                func.ST_XMax(GridCellTable.geom).label('longitude_max'),
+                func.ST_YMax(GridCellTable.geom).label('latitude_max'),
+                TimeStepTable.starttime,
+                TimeStepTable.endtime,
+            )
+            .select_from(GRParametersTable)
+            .join(ModelResultTable,
+                  ModelResultTable.oid == GRParametersTable.modelresult_oid)
+            .join(GridCellTable,
+                  GridCellTable.oid == ModelResultTable.gridcell_oid)
+            .join(TimeStepTable,
+                  TimeStepTable.oid == ModelResultTable.timestep_oid)
+            .where(*filters)
+        )
 
         result = await pandas_read_sql_async(q, session)
 

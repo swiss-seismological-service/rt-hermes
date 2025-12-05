@@ -23,7 +23,7 @@ class TimeStepTable(ORMBase):
 
     __table_args__ = (
         UniqueConstraint('starttime', 'endtime', 'forecastseries_oid'),
-    )
+        Index('idx_timestep_oid', 'oid'))
 
 
 class GridCellTable(ORMBase):
@@ -44,7 +44,8 @@ class GridCellTable(ORMBase):
         UniqueConstraint('unique_geom', 'forecastseries_oid',
                          'depth_min', 'depth_max'),
         Index('ix_grid_cells_unique_geom', 'unique_geom',
-              postgresql_using='gist'))
+              postgresql_using='gist'),
+        Index('idx_gridcell_oid', 'oid'))
 
 
 # TODO: This part should eventually become a database trigger!
@@ -94,6 +95,12 @@ class ModelResultTable(CreationInfoMixin, ORMBase):
 
     __table_args__ = (
         Index('idx_modelresult_oid', 'oid'),
+        Index('idx_modelresult_timestep_oid', 'timestep_oid'),
+        Index('idx_modelresult_gridcell_oid', 'gridcell_oid'),
+        Index('idx_modelresult_modelrun_timestep', 'modelrun_oid',
+              'timestep_oid'),
+        Index('idx_modelresult_modelrun_gridcell', 'modelrun_oid',
+              'gridcell_oid'),
     )
 
 
@@ -145,6 +152,11 @@ class ModelRunTable(ORMBase):
                                 cascade='all, delete-orphan',
                                 passive_deletes=True)
 
+    grparameters = relationship('GRParametersTable',
+                                back_populates='modelrun',
+                                cascade='all, delete-orphan',
+                                passive_deletes=True)
+
 # TODO: This part should eventually become a database trigger!
 # Event listener for after delete
 
@@ -175,4 +187,10 @@ class GRParametersTable(RealQuantityMixin('number_events'),
         'modelresult.oid', ondelete='CASCADE'), index=True)
     modelresult = relationship(
         'ModelResultTable',
+        back_populates='grparameters')
+
+    modelrun_oid = Column(UUID, ForeignKey(
+        'modelrun.oid', ondelete='CASCADE'), index=True)
+    modelrun = relationship(
+        'ModelRunTable',
         back_populates='grparameters')

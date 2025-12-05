@@ -59,11 +59,6 @@ def deserialize_seismostats_grrategrid(
     # rename value columns to match 'RealQuantity" fields
     column_renames = {f'{col}_value': col for col in RATEGRID_QUANTITY_FIELDS}
     rategrid = rategrid.rename(columns=column_renames)
-
-    boundingbox = deserialize_geom_column(rategrid['geom'])
-    rategrid = pd.concat([boundingbox, rategrid], axis=1)
-
-    rategrid = rategrid.drop(columns=['oid', 'modelresult_oid', 'geom'])
     rategrid = rategrid.dropna(axis=1, how='all')
 
     if timestep:
