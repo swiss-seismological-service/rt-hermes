@@ -23,10 +23,10 @@ class TestSeismicityDataSource:
 
         assert len(catalog.data) == 2
 
-        assert len(catalog.get_catalog(starttime
+        assert len(catalog.get_data(starttime
                    + timedelta(days=1), endtime)) == 1
 
-        assert len(catalog.get_catalog(endtime=endtime
+        assert len(catalog.get_data(endtime=endtime
                    - timedelta(days=1))) == 1
 
         assert catalog.get_quakeml() == catalog.data.to_quakeml()

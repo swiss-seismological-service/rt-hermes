@@ -41,7 +41,7 @@ dependencies = [
     "alembic",
     "geoalchemy2",
     "hermes-model",
-    "hydws-client",
+    "hydws-client>=1.3.0",
     "pandas",
     "prefect>=3.5.0",
     "psycopg2",

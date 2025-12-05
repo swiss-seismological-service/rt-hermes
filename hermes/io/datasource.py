@@ -6,6 +6,7 @@ from typing import Generic, TypeVar
 
 import requests
 from prefect import get_run_logger, task
+from typing_extensions import Self
 
 from hermes.utils.url import add_query_params
 
@@ -39,9 +40,9 @@ class DataSource(ABC, Generic[T]):
 
     @classmethod
     def from_uri(cls,
-                 uri,
+                 uri: str,
                  starttime: datetime | None = None,
-                 endtime: datetime | None = None) -> 'DataSource':
+                 endtime: datetime | None = None) -> Self:
 
         if uri.startswith('file://'):
 
@@ -59,13 +60,33 @@ class DataSource(ABC, Generic[T]):
     @classmethod
     @abstractmethod
     @task
-    def from_ws(self):
+    def from_ws(cls, url: str, starttime: datetime, endtime: datetime) -> Self:
         pass
 
     @classmethod
     @abstractmethod
     @task
-    def from_file(self):
+    def from_file(cls,
+                  file_path: str,
+                  starttime: datetime | None = None,
+                  endtime: datetime | None = None,
+                  format: str = 'quakeml') -> Self:
+        pass
+
+    @abstractmethod
+    def get_data(self,
+                 starttime: datetime | None = None,
+                 endtime: datetime | None = None) -> T:
+        """
+        Get the underlying data, optionally filtered by time.
+
+        Args:
+            starttime: Filter by start time.
+            endtime: Filter by end time.
+
+        Returns:
+            The data object of type T.
+        """
         pass
 
     @task(name='ws-request',

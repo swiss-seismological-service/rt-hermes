@@ -114,8 +114,7 @@ class SeismicityDataSource(DataSource[Catalog]):
         catalog = catalog.sort_values('time')
 
         if parts:
-            cds.logger.info(f'Received response from {url} '
-                            f'with status code {part[1]}.')
+            cds.logger.info(f'Received {len(parts)} response(s) from {url}.')
         else:
             cds.logger.warning('Observed seismicity period has zero length.'
                                ' No data was requested.')
@@ -137,13 +136,13 @@ class SeismicityDataSource(DataSource[Catalog]):
         Returns:
             Catalog in QuakeML format
         """
-        cat = self.get_catalog(starttime=starttime, endtime=endtime)
+        cat = self.get_data(starttime=starttime, endtime=endtime)
 
         return cat.to_quakeml()
 
-    def get_catalog(self,
-                    starttime: datetime | None = None,
-                    endtime: datetime | None = None) -> Catalog:
+    def get_data(self,
+                 starttime: datetime | None = None,
+                 endtime: datetime | None = None) -> Catalog:
         """
         Get the catalog, optionally filtered by start and end time.
 

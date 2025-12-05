@@ -130,7 +130,8 @@ async def forecast_runner(
             forecastseries.hydws_url,
             obs_start,
             obs_end,
-            forecastseries.injectionobservation_required
+            forecastseries.injectionobservation_required,
+            forecastseries.model_settings.get('hydraulics_resample', None)
         )
 
         # Wait for both to complete

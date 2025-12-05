@@ -62,7 +62,8 @@ def fetch_injection_observation(
     hydws_url: str,
     observation_starttime: datetime,
     observation_endtime: datetime,
-    required: EInput
+    required: EInput,
+    resample: int | None = None
 ) -> InjectionObservation | None:
     """
     Fetches injection observation data and stores it to the database.
@@ -88,7 +89,7 @@ def fetch_injection_observation(
 
     injection_observation = InjectionObservation(
         forecast_oid=forecast_oid,
-        data=data_source.get_json()
+        data=data_source.get_json(resample=resample)
     )
 
     with DatabaseSession() as session:
