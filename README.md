@@ -156,7 +156,7 @@ hermes forecasts run fs_induced --start 2022-04-21T15:00:00 --end 2022-04-21T18:
 This starts a single forecast directly on the local machine. 
 
 ### 3.5 (Optional) Schedule forecasts or execute "replays".
-To use advanced features like scheduling, it is necessary to start a process which "serves" the forecastseries. 
+To use advanced features like scheduling, it is necessary to start a process which "serves" the forecastseries. This will be a long-running process which will execute forecasts as they are requested by the schedule or by the CLI, so just let the process run in a terminal, and open a new terminal to execute further commands.
 ```
 hermes forecastseries serve fs_induced
 ```
@@ -167,7 +167,7 @@ Depending on your model, you need to control how many modelruns are executed in 
 hermes forecastseries serve fs_induced --concurrency-limit 1
 ```
 
-Once this process is running, you can "send" a forecast to the service using the above command without the `--local` flag.  
+Once this process is running, you can "send" a forecast to the service using the above command in a new terminal without the `--local` flag.
 
 ```
 hermes forecasts run fs_induced --start 2022-04-21T15:00:00 --end 2022-04-21T18:00:00
