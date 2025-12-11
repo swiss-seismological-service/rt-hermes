@@ -52,6 +52,19 @@ You can now access the Prefect Server at [http://localhost:4200](http://localhos
 
 ### 2.2 Install HERMES
 
+Going forward, we are building the following project structure:
+```bash
+.
+├── rt-hermes/          # optional, the cloned repository
+├── hermes-project/     # your project folder
+│   ├── env/            # virtual environment
+│   ├── .env            # environment file
+│   └── examples/       # copied from ../rt-hermes/examples
+└── models/             # optional, contains the installed models
+    ├── ml1/
+    └── em1/
+```
+
 #### 2.2.0 Prerequisites
 If you already followed Section [2.1](#21-installation-of-the-services), you can create a new folder next to the cloned `rt-hermes` repository to create your project.  
 If you have a Service installation provided, but would like to use the examples provided in the repository, you can still clone the repository to get the examples and the template env file:
@@ -96,11 +109,12 @@ The main usage of HERMES is currently via CLI
 #### 2.2.6 Install the models
 To run models, you need to have them installed locally. You can, for example, clone them into a subdirectory and install from there.
 ```
-git clone https://gitlab.seismo.ethz.ch/indu/em1.git models/em1
-git clone https://github.com/swiss-seismological-service/etas.git models/etas
+mkdir ../models
+git clone https://gitlab.seismo.ethz.ch/indu/em1.git ../models/em1
+git clone https://github.com/swiss-seismological-service/etas.git ../models/etas
 
-pip install -e models/em1
-pip install -e models/etas
+pip install -e ../models/em1
+pip install -e ../models/etas
 ```
 
 ## 3 Run models
