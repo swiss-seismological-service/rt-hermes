@@ -43,7 +43,7 @@ dependencies = [
     "hermes-model",
     "hydws-client>=1.3.0",
     "pandas",
-    "prefect>=3.5.0",
+    "prefect<3.6.0",
     "psycopg2",
     "pydantic-settings",
     "pydantic",
