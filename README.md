@@ -43,6 +43,7 @@ As a quick test setup, the configuration works as is, but is not secure. Please 
 #### 2.1.4 Create the Docker services
 You can now create the Docker services for the Prefect Server and the PostgreSQL database using the following command:
 ```
+docker compose --env-file .env -f compose-prefect.yaml -f compose-database.yaml pull
 docker compose --env-file .env -f compose-prefect.yaml -f compose-database.yaml up -d
 ```
 You can now access the Prefect Server at [http://localhost:4200](http://localhost:4200) and the webservice at [http://localhost:8000/docs](http://localhost:8000/docs).
