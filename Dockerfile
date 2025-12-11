@@ -17,7 +17,7 @@ RUN apt-get update \
 RUN pip install --no-cache-dir setuptools wheel
 
 # Copy requirements first for better caching
-COPY requirements-web.txt pyproject.toml setup.py ./
+COPY requirements-web.txt pyproject.toml ./
 
 # Install dependencies in single layer
 RUN pip install --no-cache-dir --upgrade pip wheel setuptools && \
