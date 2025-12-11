@@ -236,7 +236,7 @@ class ForecastSeriesScheduler:
                                       mode=mode)
         elif mode == 'deploy':
             for d in past_dates:
-                run_deployment(
+                await run_deployment(
                     name=f'ForecastRunner/{self.forecastseries.name}',
                     parameters={'forecastseries_oid': self.forecastseries.oid,
                                 'starttime': d,

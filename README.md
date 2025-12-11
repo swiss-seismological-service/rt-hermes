@@ -111,7 +111,8 @@ You can start with an example configuration and data to get a feel for how HERME
 ```
 cp -r ../rt-hermes/examples .
 ```
-Update the absolute path `fdsnws_url` in `examples/induced/forecastseries.json` to your local path of the `examples/induced` folder.
+> [!IMPORTANT]
+> Update the absolute path `fdsnws_url` in `examples/induced/forecastseries.json` to your local path of the `examples/induced` folder. Also, to use the scforge HYDWS service, you need to be connected to the ETH network or a VPN.
 
 ### 3.2 Initialize the database
 ```
