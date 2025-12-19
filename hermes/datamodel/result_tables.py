@@ -122,6 +122,14 @@ class EventForecastTable(TimeQuantityMixin('time'),
         'ModelResultTable',
         back_populates='eventforecasts')
 
+    modelrun_oid = Column(UUID,
+                          ForeignKey('modelrun.oid', ondelete='CASCADE'),
+                          index=True)
+
+    modelrun = relationship(
+        'ModelRunTable',
+        back_populates='eventforecasts')
+
 
 class ModelRunTable(ORMBase):
 
@@ -156,6 +164,11 @@ class ModelRunTable(ORMBase):
                                 back_populates='modelrun',
                                 cascade='all, delete-orphan',
                                 passive_deletes=True)
+
+    eventforecasts = relationship('EventForecastTable',
+                                  back_populates='modelrun',
+                                  cascade='all, delete-orphan',
+                                  passive_deletes=True)
 
 # TODO: This part should eventually become a database trigger!
 # Event listener for after delete

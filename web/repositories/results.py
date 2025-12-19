@@ -183,23 +183,30 @@ class AsyncEventForecastRepository(
             timestep_oid: UUID | None = None
     ) -> Catalog:
 
-        filter = [ModelResultTable.modelrun_oid == modelrun_oid]
+        filters = [EventForecastTable.modelrun_oid == modelrun_oid]
         if gridcell_oid:
-            filter.append(ModelResultTable.gridcell_oid == gridcell_oid)
+            filters.append(ModelResultTable.gridcell_oid == gridcell_oid)
         if timestep_oid:
-            filter.append(ModelResultTable.timestep_oid == timestep_oid)
+            filters.append(ModelResultTable.timestep_oid == timestep_oid)
 
-        q = select(ModelResultTable.realization_id,
-                   *EventForecastTable.__table__.c,
-                   GridCellTable.depth_min,
-                   GridCellTable.depth_max,
-                   GridCellTable.geom,
-                   TimeStepTable.starttime,
-                   TimeStepTable.endtime)\
-            .where(*filter) \
-            .join(EventForecastTable) \
-            .join(GridCellTable) \
-            .join(TimeStepTable)
+        q = (
+            select(
+                ModelResultTable.realization_id,
+                *EventForecastTable.__table__.c,
+                GridCellTable.depth_min,
+                GridCellTable.depth_max,
+                GridCellTable.geom,
+                TimeStepTable.starttime,
+                TimeStepTable.endtime)
+            .select_from(EventForecastTable)
+            .join(ModelResultTable,
+                  EventForecastTable.modelresult_oid == ModelResultTable.oid)
+            .join(GridCellTable,
+                  ModelResultTable.gridcell_oid == GridCellTable.oid)
+            .join(TimeStepTable,
+                  ModelResultTable.timestep_oid == TimeStepTable.oid)
+            .where(*filters)
+        )
 
         result = await pandas_read_sql_async(q, session)
 

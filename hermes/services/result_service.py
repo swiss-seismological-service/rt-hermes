@@ -41,6 +41,8 @@ def save_forecast_catalog(
         modelrun_oid
     )
 
+    forecast_catalog['modelrun_oid'] = modelrun_oid
+
     EventForecastRepository.create_from_forecast_catalog(
         session, forecast_catalog, ids)
 

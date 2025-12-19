@@ -96,7 +96,7 @@ def deserialize_geom_column(geom_col: pd.Series) -> pd.DataFrame:
 
 
 def serialize_seismostats_catalog(
-    catalog: Catalog,
+        catalog: Catalog,
         model: type[Model] = EventForecast) -> list[dict]:
     """
     Serialize a Seismostats Catalog object to a list of dictionaries.

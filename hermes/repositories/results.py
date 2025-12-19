@@ -5,7 +5,7 @@ from geoalchemy2.functions import (ST_Envelope, ST_Equals, ST_GeomFromText,
                                    ST_SetSRID)
 from geoalchemy2.shape import from_shape
 from seismostats import ForecastCatalog, ForecastGRRateGrid
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -241,11 +241,8 @@ class EventForecastRepository(
     @classmethod
     def count_by_modelrun(cls, session: Session, modelrun_oid: UUID) -> int:
         """Count EventForecast records for a specific modelrun."""
-        from sqlalchemy import func
         q = (select(func.count(EventForecastTable.oid))
-             .join(ModelResultTable,
-                   EventForecastTable.modelresult_oid == ModelResultTable.oid)
-             .where(ModelResultTable.modelrun_oid == modelrun_oid))
+             .where(EventForecastTable.modelrun_oid == modelrun_oid))
         result = session.execute(q).scalar()
         return result or 0
 

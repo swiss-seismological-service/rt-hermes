@@ -72,6 +72,7 @@ class EventForecast(real_value_mixin('longitude', float),
     oid: UUID | None = None
     magnitude_type: str | None = None
     modelresult_oid: UUID | None = None
+    modelrun_oid: UUID | None = None
     coordinates: Point | None = None
 
 
