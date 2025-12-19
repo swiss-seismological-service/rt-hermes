@@ -16,14 +16,14 @@ MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 class TestSeismicityObservationRepository:
     def test_create_from_catalog_and_quakeml(self, session, connection,
-                                             full_scenario):
+                                             scenario_full):
         """Test both create_from_catalog and create_from_quakeml methods"""
         catalog_path = os.path.join(MODULE_LOCATION, 'catalog.parquet.gzip')
         catalog = Catalog(pd.read_parquet(catalog_path))
 
         # Test create_from_catalog
         seismicity = SeismicityObservationRepository.create_from_catalog(
-            session, catalog, full_scenario.forecast.oid)
+            session, catalog, scenario_full.forecast.oid)
 
         count = connection.execute(
             text('SELECT COUNT(*) FROM seismicityobservation '
@@ -39,7 +39,7 @@ class TestSeismicityObservationRepository:
         # Test create_from_quakeml
         catalog_qml = catalog.to_quakeml()
         SeismicityObservationRepository.create_from_quakeml(
-            session, catalog_qml, full_scenario.forecast.oid)
+            session, catalog_qml, scenario_full.forecast.oid)
 
         total_count = connection.execute(
             text('SELECT COUNT(*) FROM seismicityobservation')).scalar()
@@ -48,7 +48,7 @@ class TestSeismicityObservationRepository:
 
 class TestInjectionObservationRepository:
     def test_create_methods_and_delete(
-            self, session, connection, full_scenario):
+            self, session, connection, scenario_full):
         """Test create_from_hydjson, create_from_borehole_hydraulics,
         and delete"""
         with open(os.path.join(MODULE_LOCATION, 'hydraulics.json'), 'rb') as f:
@@ -56,7 +56,7 @@ class TestInjectionObservationRepository:
 
         # Test create_from_hydjson
         injection = InjectionObservationRepository.create_from_hydjson(
-            session, json.dumps(data), full_scenario.forecast.oid)
+            session, json.dumps(data), scenario_full.forecast.oid)
 
         count = connection.execute(
             text('SELECT COUNT(*) FROM injectionobservation '
@@ -69,7 +69,7 @@ class TestInjectionObservationRepository:
         borehole_hydraulics = BoreholeHydraulics(data)
         injection2 = InjectionObservationRepository.\
             create_from_borehole_hydraulics(
-                session, borehole_hydraulics, full_scenario.forecast.oid)
+                session, borehole_hydraulics, scenario_full.forecast.oid)
 
         count2 = connection.execute(
             text('SELECT COUNT(*) FROM injectionobservation WHERE oid = :oid'),
@@ -88,7 +88,7 @@ class TestInjectionObservationRepository:
 
 class TestInjectionPlanRepository:
     def test_create_methods_delete_and_get_by_forecastseries(
-            self, session, connection, full_scenario):
+            self, session, connection, scenario_full):
         """Test create_from_hydjson, create_from_borehole_hydraulics,
         delete, and get_by_forecastseries"""
         with open(os.path.join(MODULE_LOCATION, 'hydraulics.json'), 'rb') as f:
@@ -97,7 +97,7 @@ class TestInjectionPlanRepository:
         # Test create_from_hydjson
         injectionplan = InjectionPlanRepository.create_from_hydjson(
             session, json.dumps(data), 'test_plan',
-            full_scenario.forecastseries.oid)
+            scenario_full.forecastseries.oid)
 
         count = connection.execute(
             text('SELECT COUNT(*) FROM injectionplan WHERE oid = :oid'),
@@ -110,7 +110,7 @@ class TestInjectionPlanRepository:
         injectionplan2 = InjectionPlanRepository.\
             create_from_borehole_hydraulics(
                 session, borehole_hydraulics, 'test_plan2',
-                full_scenario.forecastseries.oid)
+                scenario_full.forecastseries.oid)
 
         count2 = connection.execute(
             text('SELECT COUNT(*) FROM injectionplan WHERE oid = :oid'),
@@ -120,7 +120,7 @@ class TestInjectionPlanRepository:
 
         # Test get_by_forecastseries
         plans = InjectionPlanRepository.get_by_forecastseries(
-            session, full_scenario.forecastseries.oid)
+            session, scenario_full.forecastseries.oid)
         assert len(plans) == 2
 
         # Test delete
@@ -134,7 +134,7 @@ class TestInjectionPlanRepository:
 
 class TestEventObservationRepository:
     def test_events_created_by_seismicity_operations(
-            self, session, connection, full_scenario):
+            self, session, connection, scenario_full):
         """Verify that EventObservation records are created when
         SeismicityObservationRepository methods are called"""
         catalog_path = os.path.join(MODULE_LOCATION, 'catalog.parquet.gzip')
@@ -143,7 +143,7 @@ class TestEventObservationRepository:
         # EventObservations are created internally by
         # SeismicityObservationRepository
         SeismicityObservationRepository.create_from_catalog(
-            session, catalog, full_scenario.forecast.oid)
+            session, catalog, scenario_full.forecast.oid)
 
         count = connection.execute(
             text('SELECT COUNT(*) FROM eventobservation')

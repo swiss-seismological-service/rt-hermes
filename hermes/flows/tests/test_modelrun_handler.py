@@ -17,28 +17,28 @@ def mock_function(model_input):
 
 
 class TestModelRunDataAccess:
-    def test_get_seismicity_observation_none(self, flows_scenario):
+    def test_get_seismicity_observation_none(self, scenario_flows):
         modelrun_info = DBModelRunInfo(
-            forecast_start=flows_scenario.forecast.starttime,
-            forecast_end=flows_scenario.forecast.endtime,
+            forecast_start=scenario_flows.forecast.starttime,
+            forecast_end=scenario_flows.forecast.endtime,
             seismicity_observation_oid=None
         )
         data_access = ModelRunDataAccess(modelrun_info)
         assert data_access.get_seismicity_observation() is None
 
-    def test_get_injection_observation_none(self, flows_scenario):
+    def test_get_injection_observation_none(self, scenario_flows):
         modelrun_info = DBModelRunInfo(
-            forecast_start=flows_scenario.forecast.starttime,
-            forecast_end=flows_scenario.forecast.endtime,
+            forecast_start=scenario_flows.forecast.starttime,
+            forecast_end=scenario_flows.forecast.endtime,
             injection_observation_oid=None
         )
         data_access = ModelRunDataAccess(modelrun_info)
         assert data_access.get_injection_observation() is None
 
-    def test_get_injection_plan_none(self, flows_scenario):
+    def test_get_injection_plan_none(self, scenario_flows):
         modelrun_info = DBModelRunInfo(
-            forecast_start=flows_scenario.forecast.starttime,
-            forecast_end=flows_scenario.forecast.endtime,
+            forecast_start=scenario_flows.forecast.starttime,
+            forecast_end=scenario_flows.forecast.endtime,
             injection_plan_oid=None
         )
         data_access = ModelRunDataAccess(modelrun_info)
@@ -51,36 +51,36 @@ class TestDefaultModelRunner:
     def test_run(self,
                  mock_model_call: MagicMock,
                  mock_save_results: MagicMock,
-                 flows_scenario,
+                 scenario_flows,
                  prefect):
 
         modelrun_info = DBModelRunInfo(
-            forecast_start=flows_scenario.forecast.starttime,
-            forecast_end=flows_scenario.forecast.endtime,
-            forecastseries_oid=flows_scenario.forecastseries.oid,
-            bounding_polygon=flows_scenario.forecastseries.bounding_polygon,
-            depth_min=flows_scenario.forecastseries.depth_min,
-            depth_max=flows_scenario.forecastseries.depth_max
+            forecast_start=scenario_flows.forecast.starttime,
+            forecast_end=scenario_flows.forecast.endtime,
+            forecastseries_oid=scenario_flows.forecastseries.oid,
+            bounding_polygon=scenario_flows.forecastseries.bounding_polygon,
+            depth_min=scenario_flows.forecastseries.depth_min,
+            depth_max=scenario_flows.forecastseries.depth_max
         )
 
         mock_modelrun = ModelRun(
             status=EStatus.SCHEDULED,
-            modelconfig_oid=flows_scenario.model_config.oid,
-            forecast_oid=flows_scenario.forecast.oid,
+            modelconfig_oid=scenario_flows.model_config.oid,
+            forecast_oid=scenario_flows.forecast.oid,
             injectionplan_oid=None
         )
         mock_modelrun.oid = uuid4()
 
         mock_model_call.return_value = "test_results"
 
-        default_model_runner(modelrun_info, flows_scenario.model_config,
+        default_model_runner(modelrun_info, scenario_flows.model_config,
                              mock_modelrun)
 
         mock_model_call.assert_called_once()
         mock_save_results.assert_called_once_with(
-            flows_scenario.forecastseries.oid,
+            scenario_flows.forecastseries.oid,
             mock_modelrun.oid,
-            flows_scenario.model_config.result_type,
+            scenario_flows.model_config.result_type,
             "test_results"
         )
 
@@ -94,17 +94,17 @@ class TestUpdateModelrunStatus:
         flow_run.parameters = {'modelrun': modelrun_param}
         return flow_run
 
-    def test_updates_status_with_dict_parameter(self, session, flows_scenario):
+    def test_updates_status_with_dict_parameter(self, session, scenario_flows):
         """Test status update."""
         # Simulate Prefect's dict deserialization of modelrun
-        modelrun_dict = {'oid': str(flows_scenario.modelrun.oid)}
+        modelrun_dict = {'oid': str(scenario_flows.modelrun.oid)}
 
         flow_run = self._make_flow_run(modelrun_dict)
         _update_modelrun_status(flow_run, EStatus.COMPLETED)
 
         # Verify the status was updated in the database
         updated = ModelRunRepository.get_by_id(
-            session, flows_scenario.modelrun.oid)
+            session, scenario_flows.modelrun.oid)
         assert updated.status == EStatus.COMPLETED
 
     @patch('hermes.flows.modelrun_handler.DatabaseSession')

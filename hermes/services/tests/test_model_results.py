@@ -18,9 +18,9 @@ class TestSaveForecastCatalog:
     """Test forecast catalog service contract and business logic."""
 
     def test_saves_all_catalog_events(
-            self, session, modelrun_with_dependencies):
+            self, session, scenario_service):
         """Test service persists complete catalog data correctly."""
-        forecastseries, modelrun = modelrun_with_dependencies
+        forecastseries, modelrun = scenario_service
 
         # Create test catalog (uses real data file)
         catalog = TestDataGenerator.create_forecast_catalog(
@@ -72,9 +72,9 @@ class TestSaveForecastCatalog:
         assert event_count == expected_events, \
             f"Should create {expected_events} EventForecast records"
 
-    def test_handles_empty_catalog(self, session, modelrun_with_dependencies):
+    def test_handles_empty_catalog(self, session, scenario_service):
         """Test service handles empty catalog gracefully."""
-        forecastseries, modelrun = modelrun_with_dependencies
+        forecastseries, modelrun = scenario_service
 
         catalog = TestDataGenerator.create_empty_forecast_catalog(
             starttime=datetime(2022, 1, 1),
@@ -103,9 +103,9 @@ class TestSaveForecastGRRateGrid:
     """Test GR rate grid service contract and spatial grouping logic."""
 
     def test_spatial_grouping_behavior(
-            self, session, modelrun_with_dependencies):
+            self, session, scenario_service):
         """Test service correctly groups rate grid by spatial cells."""
-        forecastseries, modelrun = modelrun_with_dependencies
+        forecastseries, modelrun = scenario_service
 
         # Create rate grid (uses real data file)
         rategrid = TestDataGenerator.create_rate_grid(
@@ -156,9 +156,9 @@ class TestSaveForecastGRRateGrid:
             assert result.timestep_oid == timestep.oid
             assert result.gridcell_oid in [gc.oid for gc in gridcells]
 
-    def test_single_spatial_cell(self, session, modelrun_with_dependencies):
+    def test_single_spatial_cell(self, session, scenario_service):
         """Test service handles single spatial cell correctly."""
-        forecastseries, modelrun = modelrun_with_dependencies
+        forecastseries, modelrun = scenario_service
 
         # Create rate grid (uses real data file)
         rategrid = TestDataGenerator.create_rate_grid(
@@ -185,9 +185,9 @@ class TestSaveForecastGRRateGrid:
             f"Should create {expected_results} ModelResult records"
 
     def test_error_handling_invalid_grid_id(
-            self, session, modelrun_with_dependencies):
+            self, session, scenario_service):
         """Test service handles invalid grid_id gracefully."""
-        forecastseries, modelrun = modelrun_with_dependencies
+        forecastseries, modelrun = scenario_service
 
         # Create rate grid with invalid grid_id (manually set to test error
         # handling)
@@ -212,9 +212,9 @@ class TestServiceDataIntegrity:
     """Test service maintains data integrity across operations."""
 
     def test_reuse_existing_timestep_and_gridcell(
-            self, session, modelrun_with_dependencies):
+            self, session, scenario_service):
         """Test service reuses existing TimeStep and GridCell records."""
-        forecastseries, modelrun1 = modelrun_with_dependencies
+        forecastseries, modelrun1 = scenario_service
 
         # Create first catalog
         catalog1 = TestDataGenerator.create_forecast_catalog(

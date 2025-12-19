@@ -9,8 +9,8 @@ from hermes.tests.data_factories import TestScenarioBuilder
 
 
 @pytest.fixture()
-def flows_scenario(session):
-    """Complete scenario for flows testing using factory defaults."""
+def scenario_flows(session):
+    """Complete scenario for flows testing."""
     return TestScenarioBuilder.create_full_modelrun_scenario(
         session,
         model_config={
@@ -21,7 +21,7 @@ def flows_scenario(session):
 
 
 @pytest.fixture()
-def flows_scenario_with_injection(session):
+def scenario_flows_with_injection(session):
     """Complete scenario including injection plan."""
     scenario = TestScenarioBuilder.create_full_modelrun_scenario(
         session,
@@ -31,7 +31,6 @@ def flows_scenario_with_injection(session):
         }
     )
 
-    # Add minimal injection plan
     template = ('{"borehole_name": "16A-32", '
                 '"section_name": "16A-32/section_01", '
                 '"type": "multiply", "resolution": 60, '

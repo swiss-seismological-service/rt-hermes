@@ -25,11 +25,7 @@ def create_test_engine(db_name: str = None):
 
 def delete_database(connection: Connection, db_name: str):
     """Helper to clean up test database."""
-    try:
-        connection.execute(text(f"DROP DATABASE {db_name}"))
-    except (ProgrammingError, OperationalError):
-        # Database doesn't exist or is in use - ignore silently
-        pass
+    connection.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
 
 
 def create_test_database(test_db_name: str) -> Connection:
@@ -80,25 +76,38 @@ def teardown_test_tables(connection: Connection):
 
 
 def create_test_session(connection: Connection):
-    """Create a test session with transaction isolation."""
+    """Create a test session with transaction isolation.
+
+    Returns:
+        tuple: (session, transaction, listener) - listener must be passed to
+               cleanup_test_session for proper cleanup
+    """
     transaction = connection.begin()
     session = scoped_session(sessionmaker(
         bind=connection, expire_on_commit=False))
 
     session.begin_nested()
 
-    # Restart savepoint after each commit
-    @event.listens_for(session, "after_transaction_end")
-    def restart_savepoint(_, transaction):
-        if transaction.nested and not transaction._parent.nested:
-            session.expire_all()
-            session.begin_nested()
+    def restart_savepoint(session_, transaction_):
+        if transaction_.nested and not transaction_.parent.nested:
+            session_.expire_all()
+            session_.begin_nested()
 
-    return session, transaction
+    event.listen(session, "after_transaction_end", restart_savepoint)
+
+    return session, transaction, restart_savepoint
 
 
-def cleanup_test_session(session, transaction):
-    """Clean up test session and transaction."""
+def cleanup_test_session(session, transaction, listener=None):
+    """Clean up test session and transaction.
+
+    Args:
+        session: The scoped session to clean up
+        transaction: The outer transaction to rollback
+        listener: Event listener to remove
+    """
+    if listener is not None:
+        event.remove(session, "after_transaction_end", listener)
     session.remove()
     if transaction.is_active:
         transaction.rollback()

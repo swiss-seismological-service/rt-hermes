@@ -28,7 +28,7 @@ class TestForecastRunner:
                   mock_get_catalog: MagicMock,
                   mock_default_model_runner: MagicMock,
                   session,
-                  flows_scenario_with_injection,
+                  scenario_flows_with_injection,
                   prefect_with_logs
                   ):
         """Test the flow-centric forecast_runner function end-to-end."""
@@ -38,7 +38,7 @@ class TestForecastRunner:
 
         # Execute the new flow
         forecast = asyncio.run(forecast_runner(
-            flows_scenario_with_injection.forecastseries.oid,
+            scenario_flows_with_injection.forecastseries.oid,
             starttime=datetime(2022, 4, 21, 14, 50, 0),
             endtime=datetime(2022, 4, 21, 14, 55, 0),
             mode='local'
@@ -48,7 +48,7 @@ class TestForecastRunner:
         assert forecast is not None
         assert forecast.status == EStatus.COMPLETED
         assert forecast.forecastseries_oid == \
-            flows_scenario_with_injection.forecastseries.oid
+            scenario_flows_with_injection.forecastseries.oid
 
         # Verify model runner was called
         assert mock_default_model_runner.call_count == 1
@@ -70,7 +70,7 @@ class TestForecastRunner:
             mock_get_catalog: MagicMock,
             mock_default_model_runner: MagicMock,
             session,
-            flows_scenario_with_injection,
+            scenario_flows_with_injection,
             prefect_with_logs):
         """Test that forecast status is FAILED when model raises exception."""
         # Mock external API responses
@@ -83,7 +83,7 @@ class TestForecastRunner:
         # Execute the flow
         with pytest.raises(FailedRun):
             asyncio.run(forecast_runner(
-                flows_scenario_with_injection.forecastseries.oid,
+                scenario_flows_with_injection.forecastseries.oid,
                 starttime=datetime(2022, 4, 21, 14, 50, 0),
                 endtime=datetime(2022, 4, 21, 14, 55, 0),
                 mode='local'
@@ -94,28 +94,28 @@ class TestForecastRunner:
         assert mock_default_model_runner.call_count == 1
 
 
-def test_prepare_model_runs(flows_scenario):
+def test_prepare_model_runs(scenario_flows):
     runs = prepare_model_runs(
-        flows_scenario.forecast,
-        flows_scenario.forecastseries,
-        [flows_scenario.model_config])
+        scenario_flows.forecast,
+        scenario_flows.forecastseries,
+        [scenario_flows.model_config])
 
     assert len(runs) == 1
-    assert runs[0][1] == flows_scenario.model_config
+    assert runs[0][1] == scenario_flows.model_config
 
     modelrun_info = runs[0][0]
     assert (modelrun_info.forecastseries_oid
-            == flows_scenario.forecastseries.oid)
-    assert modelrun_info.forecast_oid == flows_scenario.forecast.oid
+            == scenario_flows.forecastseries.oid)
+    assert modelrun_info.forecast_oid == scenario_flows.forecast.oid
     assert (modelrun_info.forecast_start
-            == flows_scenario.forecast.starttime)
-    assert modelrun_info.forecast_end == flows_scenario.forecast.endtime
+            == scenario_flows.forecast.starttime)
+    assert modelrun_info.forecast_end == scenario_flows.forecast.endtime
     assert (modelrun_info.bounding_polygon
-            == flows_scenario.forecastseries.bounding_polygon.wkt)
+            == scenario_flows.forecastseries.bounding_polygon.wkt)
     assert (modelrun_info.depth_min
-            == flows_scenario.forecastseries.depth_min)
+            == scenario_flows.forecastseries.depth_min)
     assert (modelrun_info.depth_max
-            == flows_scenario.forecastseries.depth_max)
+            == scenario_flows.forecastseries.depth_max)
     assert modelrun_info.injection_plan_oid is None
     assert modelrun_info.injection_observation_oid is None
     assert modelrun_info.seismicity_observation_oid is None

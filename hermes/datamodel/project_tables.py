@@ -131,9 +131,10 @@ class ModelConfigTable(ORMBase, NameMixin):
     sfm_module = Column(String)
     sfm_function = Column(String)
 
-    last_modified = Column(TIMESTAMP(precision=0),
-                           default=datetime.now(timezone.utc),
-                           onupdate=datetime.now(timezone.utc))
+    last_modified = Column(
+        TIMESTAMP(precision=0),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     model_parameters = Column(JSON, nullable=False)
 

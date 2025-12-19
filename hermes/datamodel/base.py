@@ -130,8 +130,9 @@ class CreationInfoMixin(object):
     """
     creationinfo_author = Column(String)
     creationinfo_agencyid = Column(String)
-    creationinfo_creationtime = Column(TIMESTAMP(precision=0),
-                                       default=datetime.now(timezone.utc))
+    creationinfo_creationtime = Column(
+        TIMESTAMP(precision=0),
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     creationinfo_version = Column(String)
 
 

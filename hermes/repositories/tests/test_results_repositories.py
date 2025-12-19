@@ -28,24 +28,24 @@ MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 class TestGridCellRepository:
-    def test_get_or_create(self, session, full_scenario):
+    def test_get_or_create(self, session, scenario_full):
         cell1 = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=full_scenario.forecastseries.oid)
+                         forecastseries_oid=scenario_full.forecastseries.oid)
         cell1 = GridCellRepository.get_or_create(session, cell1)
         assert cell1.oid is not None
 
         cell2 = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=full_scenario.forecastseries.oid)
+                         forecastseries_oid=scenario_full.forecastseries.oid)
         cell2 = GridCellRepository.get_or_create(session, cell2)
         assert cell1.oid == cell2.oid
 
-    def test_unique_constraint(self, session, full_scenario):
+    def test_unique_constraint(self, session, scenario_full):
         fs = TestDataFactory.create_forecastseries(
-            project_oid=full_scenario.project.oid,
+            project_oid=scenario_full.project.oid,
             name='test'
         )
 
@@ -53,7 +53,7 @@ class TestGridCellRepository:
         cell1 = GridCell(geom=poly1,
                          depth_max=10,
                          depth_min=5,
-                         forecastseries_oid=full_scenario.forecastseries.oid)
+                         forecastseries_oid=scenario_full.forecastseries.oid)
 
         ForecastSeriesRepository.create(session, fs)
         GridCellRepository.create(session, cell1)
@@ -61,68 +61,68 @@ class TestGridCellRepository:
         with pytest.raises(IntegrityError):
             GridCellRepository.create(session, cell1)
 
-    def test_find_by_forecastseries(self, session, full_scenario):
+    def test_find_by_forecastseries(self, session, scenario_full):
         cell = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                         depth_max=10,
                         depth_min=5,
-                        forecastseries_oid=full_scenario.forecastseries.oid)
+                        forecastseries_oid=scenario_full.forecastseries.oid)
         GridCellRepository.create(session, cell)
 
         cells = GridCellRepository.find_by_forecastseries(
-            session, full_scenario.forecastseries.oid)
+            session, scenario_full.forecastseries.oid)
         assert len(cells) == 1
         assert cells[0].depth_min == 5
 
-    def test_find_by_spatial_bounds(self, session, full_scenario):
+    def test_find_by_spatial_bounds(self, session, scenario_full):
         cell = GridCell(geom=Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
                         depth_max=10,
                         depth_min=5,
-                        forecastseries_oid=full_scenario.forecastseries.oid)
+                        forecastseries_oid=scenario_full.forecastseries.oid)
         GridCellRepository.create(session, cell)
 
         found_cell = GridCellRepository.find_by_spatial_bounds(
-            session, full_scenario.forecastseries.oid, 5, 10)
+            session, scenario_full.forecastseries.oid, 5, 10)
         assert found_cell.depth_min == 5
         assert found_cell.depth_max == 10
 
 
 class TestTimeStepRepository:
-    def test_get_or_create(self, session, full_scenario):
+    def test_get_or_create(self, session, scenario_full):
         timestep = TimeStep(
             starttime=datetime(2021, 1, 1),
             endtime=datetime(2021, 1, 2),
-            forecastseries_oid=full_scenario.forecastseries.oid)
+            forecastseries_oid=scenario_full.forecastseries.oid)
         timestep = TimeStepRepository.get_or_create(session, timestep)
         assert timestep.oid is not None
 
         timestep2 = TimeStep(
             starttime=datetime(2021, 1, 1),
             endtime=datetime(2021, 1, 2),
-            forecastseries_oid=full_scenario.forecastseries.oid)
+            forecastseries_oid=scenario_full.forecastseries.oid)
         timestep2 = TimeStepRepository.get_or_create(session, timestep2)
         assert timestep.oid == timestep2.oid
 
-    def test_unique_constraint(self, session, full_scenario):
+    def test_unique_constraint(self, session, scenario_full):
         ts1 = TimeStep(starttime=datetime(2021, 1, 1),
                        endtime=datetime(2021, 1, 2),
-                       forecastseries_oid=full_scenario.forecastseries.oid)
+                       forecastseries_oid=scenario_full.forecastseries.oid)
 
         TimeStepRepository.create(session, ts1)
 
         with pytest.raises(IntegrityError):
             TimeStepRepository.create(session, ts1)
 
-    def test_find_by_bounds(self, session, full_scenario):
+    def test_find_by_bounds(self, session, scenario_full):
         starttime = datetime(2021, 1, 1)
         endtime = datetime(2021, 1, 2)
         timestep = TimeStep(
             starttime=starttime,
             endtime=endtime,
-            forecastseries_oid=full_scenario.forecastseries.oid)
+            forecastseries_oid=scenario_full.forecastseries.oid)
         TimeStepRepository.create(session, timestep)
 
         found_timestep = TimeStepRepository.find_by_bounds(
-            session, full_scenario.forecastseries.oid, starttime, endtime)
+            session, scenario_full.forecastseries.oid, starttime, endtime)
         assert found_timestep.starttime == starttime
         assert found_timestep.endtime == endtime
 
@@ -143,9 +143,9 @@ class TestModelResultRepository:
         assert count == 10
         assert len(ids) == 10
 
-    def test_count_by_modelrun(self, session, full_scenario):
+    def test_count_by_modelrun(self, session, scenario_full):
         forecast = TestDataFactory.create_forecast(
-            forecastseries_oid=full_scenario.forecastseries.oid
+            forecastseries_oid=scenario_full.forecastseries.oid
         )
         forecast = ForecastRepository.create(session, forecast)
 
@@ -158,9 +158,9 @@ class TestModelResultRepository:
         count = ModelResultRepository.count_by_modelrun(session, modelrun.oid)
         assert count == 5
 
-    def test_get_by_modelrun(self, session, full_scenario):
+    def test_get_by_modelrun(self, session, scenario_full):
         forecast = TestDataFactory.create_forecast(
-            forecastseries_oid=full_scenario.forecastseries.oid
+            forecastseries_oid=scenario_full.forecastseries.oid
         )
         forecast = ForecastRepository.create(session, forecast)
 
@@ -188,24 +188,24 @@ class TestModelRunRepository:
         retrieved = ModelRunRepository.get_by_id(session, modelrun.oid)
         assert retrieved.status == EStatus.RUNNING
 
-    def test_get_by_modelconfig(self, session, full_scenario):
-        # full_scenario already has one modelrun, so we expect 1 initially
+    def test_get_by_modelconfig(self, session, scenario_full):
+        # scenario_full already has one modelrun, so we expect 1 initially
         initial_modelruns = ModelRunRepository.get_by_modelconfig(
-            session, full_scenario.model_config.oid)
+            session, scenario_full.model_config.oid)
         initial_count = len(initial_modelruns)
 
         # Create another modelrun with the same modelconfig
         modelrun = ModelRun(
             status=EStatus.PENDING,
-            modelconfig_oid=full_scenario.model_config.oid
+            modelconfig_oid=scenario_full.model_config.oid
         )
         ModelRunRepository.create(session, modelrun)
 
         # Now we should have initial_count + 1
         modelruns = ModelRunRepository.get_by_modelconfig(
-            session, full_scenario.model_config.oid)
+            session, scenario_full.model_config.oid)
         assert len(modelruns) == initial_count + 1
-        assert all(mr.modelconfig_oid == full_scenario.model_config.oid
+        assert all(mr.modelconfig_oid == scenario_full.model_config.oid
                    for mr in modelruns)
 
 

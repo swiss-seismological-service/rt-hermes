@@ -36,22 +36,22 @@ def session(connection: Connection, request: pytest.FixtureRequest):
 
     Automatically configures DatabaseSession() to return this test session.
     """
-    session, transaction = create_test_session(connection)
+    session, transaction, listener = create_test_session(connection)
     set_test_session(session)
 
     def teardown():
         set_test_session(None)
-        cleanup_test_session(session, transaction)
+        cleanup_test_session(session, transaction, listener)
 
     request.addfinalizer(teardown)
     return session
 
 
-# Scenario Fixtures for Complex Test Scenarios
+# Scenario Fixtures
 
 @pytest.fixture()
-def full_scenario(session):
-    """Complete test scenario: project → series → forecast → modelrun."""
+def scenario_full(session):
+    """Complete test scenario: project -> series -> forecast -> modelrun."""
     return TestScenarioBuilder.create_full_modelrun_scenario(
         session,
         forecastseries={'tags': ['tag1', 'tag2']},
@@ -60,8 +60,11 @@ def full_scenario(session):
 
 
 @pytest.fixture()
-def modelrun_with_dependencies(session):
-    """ModelRun with all required dependencies for service testing."""
+def scenario_service(session):
+    """
+    ModelRun with dependencies for service testing.
+    Returns (forecastseries, modelrun).
+    """
     return TestScenarioBuilder.create_service_test_scenario(session)
 
 

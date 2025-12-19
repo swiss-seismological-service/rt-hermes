@@ -11,7 +11,11 @@ from hermes.config import get_settings
 
 
 class DatabaseSessionManager:
-    def __init__(self, host: str | None = None, engine_kwargs: dict[str, Any] = {}):
+    _test_session: AsyncSession | None = None
+
+    def __init__(self,
+                 host: str | None = None,
+                 engine_kwargs: dict[str, Any] = {}):
         self._engine = None
         self._sessionmaker = None
 
@@ -25,10 +29,14 @@ class DatabaseSessionManager:
             self._sessionmaker = async_sessionmaker(
                 autocommit=False, autoflush=False, bind=self._engine)
 
-    def configure_for_testing(self, engine, sessionmaker):
-        """Configure sessionmanager with test database connection."""
-        self._engine = engine
-        self._sessionmaker = sessionmaker
+    def set_test_session(self, session: AsyncSession | None) -> None:
+        """Inject test session for TESTING mode.
+
+        When set, the session() context manager returns this session
+        instead of creating a new one. The test fixture manages the
+        session lifecycle, so it won't be closed by the context manager.
+        """
+        self._test_session = session
 
     async def close(self):
         if self._engine is None:
@@ -52,6 +60,10 @@ class DatabaseSessionManager:
 
     @contextlib.asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
+        if self._test_session is not None:
+            yield self._test_session
+            return
+
         if self._sessionmaker is None:
             raise Exception("DatabaseSessionManager is not initialized")
 

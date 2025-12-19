@@ -38,11 +38,11 @@ class TestTagRepository:
 
 class TestForecastSeriesRepository:
 
-    def test_get_by_project(self, session, full_scenario):
+    def test_get_by_project(self, session, scenario_full):
         series_list = ForecastSeriesRepository.get_by_project(
-            session, full_scenario.project.oid)
+            session, scenario_full.project.oid)
         assert len(series_list) == 1
-        assert series_list[0].name == full_scenario.forecastseries.name
+        assert series_list[0].name == scenario_full.forecastseries.name
 
     def test_delete_cascade(self, session):
         project = TestDataFactory.create_project()
@@ -59,28 +59,28 @@ class TestForecastSeriesRepository:
         assert ForecastSeriesRepository.get_by_id(
             session, forecastseries.oid) is None
 
-    def test_get_tags(self, session, full_scenario):
+    def test_get_tags(self, session, scenario_full):
         tags = ForecastSeriesRepository.get_tags(
-            session, full_scenario.forecastseries.oid)
+            session, scenario_full.forecastseries.oid)
 
         assert len(tags) == 2
         tag_names = [t.name for t in tags]
         assert 'tag1' in tag_names
         assert 'tag3' not in tag_names
 
-    def test_get_model_configs(self, session, full_scenario):
+    def test_get_model_configs(self, session, scenario_full):
         model_configs = ForecastSeriesRepository.get_model_configs(
-            session, full_scenario.forecastseries.oid)
+            session, scenario_full.forecastseries.oid)
 
         assert len(model_configs) == 1
-        assert model_configs[0].name == full_scenario.model_config.name
+        assert model_configs[0].name == scenario_full.model_config.name
 
 
 class TestForecastRepository:
 
-    def test_update_status(self, session, full_scenario):
+    def test_update_status(self, session, scenario_full):
         forecast = TestDataFactory.create_forecast(
-            forecastseries_oid=full_scenario.forecastseries.oid,
+            forecastseries_oid=scenario_full.forecastseries.oid,
             status=EStatus.PENDING
         )
         forecast = ForecastRepository.create(session, forecast)
@@ -89,31 +89,31 @@ class TestForecastRepository:
             session, forecast.oid, EStatus.RUNNING)
         assert updated.status == EStatus.RUNNING
 
-    def test_get_by_forecastseries(self, session, full_scenario):
-        # full_scenario already has one forecast, get initial count
+    def test_get_by_forecastseries(self, session, scenario_full):
+        # scenario_full already has one forecast, get initial count
         initial_forecasts = ForecastRepository.get_by_forecastseries(
-            session, full_scenario.forecastseries.oid)
+            session, scenario_full.forecastseries.oid)
         initial_count = len(initial_forecasts)
 
         # Create another forecast for the same forecastseries
         forecast = TestDataFactory.create_forecast(
-            forecastseries_oid=full_scenario.forecastseries.oid
+            forecastseries_oid=scenario_full.forecastseries.oid
         )
         ForecastRepository.create(session, forecast)
 
         # Should now have initial_count + 1 forecasts
         forecasts = ForecastRepository.get_by_forecastseries(
-            session, full_scenario.forecastseries.oid)
+            session, scenario_full.forecastseries.oid)
         assert len(forecasts) == initial_count + 1
 
-    def test_delete_cascade_from_project(self, session, full_scenario):
+    def test_delete_cascade_from_project(self, session, scenario_full):
         forecast = TestDataFactory.create_forecast(
-            forecastseries_oid=full_scenario.forecastseries.oid,
+            forecastseries_oid=scenario_full.forecastseries.oid,
             status=EStatus.PENDING
         )
         forecast = ForecastRepository.create(session, forecast)
 
-        ProjectRepository.delete(session, full_scenario.project.oid)
+        ProjectRepository.delete(session, scenario_full.project.oid)
 
         assert ForecastRepository.get_by_id(session, forecast.oid) is None
 
