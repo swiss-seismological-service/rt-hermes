@@ -11,15 +11,24 @@ from hermes.config import get_settings
 
 
 class DatabaseSessionManager:
-    def __init__(self, host: str, engine_kwargs: dict[str, Any] = {}):
-        settings = get_settings()
-        self._engine = create_async_engine(
-            host,
-            pool_size=settings.POSTGRES_POOL_SIZE,
-            max_overflow=settings.POSTGRES_MAX_OVERFLOW,
-            **engine_kwargs)
-        self._sessionmaker = async_sessionmaker(
-            autocommit=False, autoflush=False, bind=self._engine)
+    def __init__(self, host: str | None = None, engine_kwargs: dict[str, Any] = {}):
+        self._engine = None
+        self._sessionmaker = None
+
+        if host is not None:
+            settings = get_settings()
+            self._engine = create_async_engine(
+                host,
+                pool_size=settings.POSTGRES_POOL_SIZE,
+                max_overflow=settings.POSTGRES_MAX_OVERFLOW,
+                **engine_kwargs)
+            self._sessionmaker = async_sessionmaker(
+                autocommit=False, autoflush=False, bind=self._engine)
+
+    def configure_for_testing(self, engine, sessionmaker):
+        """Configure sessionmanager with test database connection."""
+        self._engine = engine
+        self._sessionmaker = sessionmaker
 
     async def close(self):
         if self._engine is None:
@@ -56,8 +65,11 @@ class DatabaseSessionManager:
             await session.close()
 
 
+_settings = get_settings()
 sessionmanager = DatabaseSessionManager(
-    get_settings().ASYNC_SQLALCHEMY_DATABASE_URL, {"echo": False})
+    None if _settings.TESTING else _settings.ASYNC_SQLALCHEMY_DATABASE_URL,
+    {"echo": False}
+)
 
 
 async def get_db():

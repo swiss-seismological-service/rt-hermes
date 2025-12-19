@@ -22,14 +22,8 @@ with open(os.path.join(CENTRAL_DATA_LOCATION, 'quakeml.xml')) as f:
 @patch('hermes.flows.forecast_runner.default_model_runner', autospec=True)
 @patch('hermes.io.SeismicityDataSource.from_uri', autospec=True)
 @patch('hermes.io.HydraulicsDataSource.from_uri', autospec=True)
-@patch('hermes.flows.forecast_runner.DatabaseSession')
-@patch('hermes.flows.forecast_tasks.DatabaseSession')
-@patch('hermes.services.forecast_service.DatabaseSession')
 class TestForecastRunner:
     def test_full(self,
-                  forecast_service_session: MagicMock,
-                  forecast_tasks_session: MagicMock,
-                  forecast_runner_session: MagicMock,
                   mock_get_injection: MagicMock,
                   mock_get_catalog: MagicMock,
                   mock_default_model_runner: MagicMock,
@@ -37,12 +31,7 @@ class TestForecastRunner:
                   flows_scenario_with_injection,
                   prefect_with_logs
                   ):
-        """Test the new flow-centric forecast_runner function end-to-end."""
-        # Configure all DatabaseSession mocks to use test session
-        forecast_service_session.return_value.__enter__.return_value = session
-        forecast_tasks_session.return_value.__enter__.return_value = session
-        forecast_runner_session.return_value.__enter__.return_value = session
-
+        """Test the flow-centric forecast_runner function end-to-end."""
         # Mock external API responses
         mock_get_catalog.return_value.get_quakeml.return_value = SEISMICITY
         mock_get_injection.return_value.get_json.return_value = INJECTION
@@ -77,9 +66,6 @@ class TestForecastRunner:
     def test_model_failure_sets_forecast_failed(
             self,
             mock_update_forecast_status: MagicMock,
-            forecast_service_session: MagicMock,
-            forecast_tasks_session: MagicMock,
-            forecast_runner_session: MagicMock,
             mock_get_injection: MagicMock,
             mock_get_catalog: MagicMock,
             mock_default_model_runner: MagicMock,
@@ -87,11 +73,6 @@ class TestForecastRunner:
             flows_scenario_with_injection,
             prefect_with_logs):
         """Test that forecast status is FAILED when model raises exception."""
-        # Configure all DatabaseSession mocks to use test session
-        forecast_service_session.return_value.__enter__.return_value = session
-        forecast_tasks_session.return_value.__enter__.return_value = session
-        forecast_runner_session.return_value.__enter__.return_value = session
-
         # Mock external API responses
         mock_get_catalog.return_value.get_quakeml.return_value = SEISMICITY
         mock_get_injection.return_value.get_json.return_value = INJECTION

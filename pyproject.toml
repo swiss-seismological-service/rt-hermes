@@ -61,15 +61,19 @@ requires-python = ">=3.12,<3.14"
 dev = [
     "build",
     "flake8",
+    "httpx",
     "isort",
     "pyarrow",
     "pytest-asyncio",
     "pytest-cov",
+    "pytest-env",
     "pytest",
     "setuptools-scm",
     "tox",
     "twine",
 ]
+
+ws = ["asyncpg", "fastapi[all]", "gunicorn", "uvicorn"]
 
 [project.scripts]
 hermes = "hermes.cli:app"
@@ -86,3 +90,6 @@ Issues = "https://github.com/swiss-seismological-service/rt-hermes/issues"
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
 filterwarnings = ["ignore:divide by zero"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+env = ["TESTING=1"]

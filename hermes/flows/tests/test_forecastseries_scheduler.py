@@ -9,6 +9,7 @@ from hermes.flows.forecastseries_scheduler import ForecastSeriesScheduler
 from hermes.schemas import ForecastSeries
 
 
+@pytest.mark.usefixtures("session")
 @patch('hermes.repositories.project.ForecastSeriesRepository.get_by_id',
        autospec=True)
 class TestForecastSeriesScheduler:
@@ -158,6 +159,7 @@ class TestForecastSeriesScheduler:
         )
 
 
+@pytest.mark.usefixtures("session")
 @patch('hermes.repositories.project.ForecastSeriesRepository.get_by_id',
        autospec=True)
 @patch('hermes.repositories.project.ForecastSeriesRepository.update',

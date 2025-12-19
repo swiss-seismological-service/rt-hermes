@@ -5,6 +5,7 @@ from prefect.testing.fixtures import \
 from prefect.testing.utilities import prefect_test_harness
 from sqlalchemy import Connection
 
+from hermes.repositories.database import set_test_session
 from hermes.repositories.tests.database import (cleanup_test_environment,
                                                 cleanup_test_session,
                                                 create_test_environment,
@@ -30,11 +31,16 @@ def connection(request: pytest.FixtureRequest) -> Connection:
 def session(connection: Connection, request: pytest.FixtureRequest):
     """Create database session with transaction rollback for test isolation.
 
-    Uses repository package utilities to maintain the repository pattern.
+    Uses savepoint-based isolation: each test runs in a nested transaction
+    that is rolled back after the test, leaving the database unchanged.
+
+    Automatically configures DatabaseSession() to return this test session.
     """
     session, transaction = create_test_session(connection)
+    set_test_session(session)
 
     def teardown():
+        set_test_session(None)
         cleanup_test_session(session, transaction)
 
     request.addfinalizer(teardown)

@@ -76,26 +76,10 @@ class TestSaveForecastCatalog:
         """Test service handles empty catalog gracefully."""
         forecastseries, modelrun = modelrun_with_dependencies
 
-        # Create empty catalog (manually since we can't get empty from file)
-        import pandas as pd
-        from seismostats import ForecastCatalog
-
-        empty_df = pd.DataFrame(columns=[
-            'time', 'latitude', 'longitude', 'depth',
-            'magnitude', 'magnitude_type', 'catalog_id'
-        ])
-        catalog = ForecastCatalog(empty_df)
-        catalog.n_catalogs = 1
-        catalog.starttime = datetime(2022, 1, 1)
-        catalog.endtime = datetime(2022, 1, 31)
-        # Add required bounding_polygon attribute
-        from shapely import Polygon
-        catalog.bounding_polygon = Polygon([
-            (5.95, 45.82), (10.49, 45.82),
-            (10.49, 47.81), (5.95, 47.81), (5.95, 45.82)
-        ])
-        catalog.depth_min = 0
-        catalog.depth_max = 10
+        catalog = TestDataGenerator.create_empty_forecast_catalog(
+            starttime=datetime(2022, 1, 1),
+            endtime=datetime(2022, 1, 31)
+        )
 
         # Execute service
         save_forecast_catalog(

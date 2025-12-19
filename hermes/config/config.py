@@ -11,6 +11,9 @@ from hermes.config.blocks import HermesDatabaseCredentials
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
 
+    # Test mode flag - set by pytest via pytest-env plugin
+    TESTING: bool = False
+
     # Credential source: 'env' (default) or 'prefect' (for distributed workers)
     CREDENTIAL_SOURCE: Literal['env', 'prefect'] = 'env'
 

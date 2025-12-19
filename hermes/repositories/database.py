@@ -7,12 +7,33 @@ from sqlalchemy.orm.session import Session
 from sqlalchemy.schema import MetaData
 from sqlalchemy.sql import text
 
+from hermes.config import get_settings
 from hermes.datamodel.base import ORMBase
 
 EXTENSIONS = ['postgis', 'postgis_topology']
 
 _engine: Engine | None = None
 _SessionFactory: sessionmaker | None = None
+_test_session: Session | None = None
+
+
+class _TestSessionContext:
+    """Prevents test session from being closed on context exit."""
+
+    def __init__(self, session: Session):
+        self._session = session
+
+    def __enter__(self) -> Session:
+        return self._session
+
+    def __exit__(self, *args) -> bool:
+        return False
+
+
+def set_test_session(session: Session | None) -> None:
+    """Set or clear the test session for TESTING mode."""
+    global _test_session
+    _test_session = session
 
 
 def create_extensions(engine: Engine) -> None:
@@ -24,7 +45,6 @@ def create_extensions(engine: Engine) -> None:
 
 
 def create_engine(url: URL, **kwargs) -> Engine:
-    from hermes.config import get_settings
     settings = get_settings()
     engine = _create_engine(
         url,
@@ -46,7 +66,6 @@ def get_engine() -> Engine:
     """
     global _engine
     if _engine is None:
-        from hermes.config import get_settings
         settings = get_settings()
         _engine = _create_engine(
             settings.SQLALCHEMY_DATABASE_URL,
@@ -76,9 +95,20 @@ def DatabaseSession() -> Session:
     """
     Get a new database session.
 
+    In TESTING mode (TESTING=1 env var), returns the test session
+    configured by fixtures with savepoint-based isolation.
+
     Returns:
-        SQLAlchemy Session instance
+        SQLAlchemy Session instance (or test session wrapper in TESTING mode)
     """
+    if get_settings().TESTING:
+        if _test_session is None:
+            raise RuntimeError(
+                "TESTING mode enabled but no test session configured. "
+                "Ensure your test uses the 'session' fixture."
+            )
+        return _TestSessionContext(_test_session)
+
     global _SessionFactory
     if _SessionFactory is None:
         _SessionFactory = sessionmaker(get_engine(), expire_on_commit=True)

@@ -67,9 +67,9 @@ class TestSeismicityDataSource:
         assert len(catalog.data) == 4
 
     @patch('hermes.io.seismicity.SeismicityDataSource.from_file',
-           autocast=True)
+           autospec=True)
     @patch('hermes.io.seismicity.SeismicityDataSource.from_ws',
-           autocast=True)
+           autospec=True)
     def test_get_uri_catalog(self,
                              mock_fdsn_source: MagicMock,
                              mock_file_source: MagicMock):

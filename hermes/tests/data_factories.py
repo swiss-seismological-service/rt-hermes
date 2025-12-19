@@ -2,6 +2,7 @@ import os
 import pickle
 import uuid
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from typing import Optional
 
 import numpy as np
@@ -166,6 +167,25 @@ class TestDataGenerator:
         return catalog
 
     @staticmethod
+    def create_empty_forecast_catalog(**kwargs) -> ForecastCatalog:
+        """Create empty ForecastCatalog for edge case testing."""
+        empty_df = pd.DataFrame(columns=[
+            'time', 'latitude', 'longitude', 'depth',
+            'magnitude', 'magnitude_type', 'catalog_id'
+        ])
+        catalog = ForecastCatalog(empty_df)
+        catalog.n_catalogs = kwargs.get('n_catalogs', 1)
+        catalog.starttime = kwargs.get('starttime', datetime(2022, 1, 1))
+        catalog.endtime = kwargs.get('endtime', datetime(2022, 1, 31))
+        catalog.bounding_polygon = kwargs.get('bounding_polygon', Polygon([
+            (5.95, 45.82), (10.49, 45.82),
+            (10.49, 47.81), (5.95, 47.81), (5.95, 45.82)
+        ]))
+        catalog.depth_min = kwargs.get('depth_min', 0)
+        catalog.depth_max = kwargs.get('depth_max', 10)
+        return catalog
+
+    @staticmethod
     def create_rate_grid(
         **kwargs
     ) -> pd.DataFrame:
@@ -230,18 +250,13 @@ class TestScenarioBuilder:
         session.add(modelrun)
         session.commit()
 
-        # Return a simple namespace object with all components
-        class Scenario:
-            pass
-
-        scenario = Scenario()
-        scenario.project = project
-        scenario.forecastseries = forecastseries
-        scenario.model_config = model_config
-        scenario.forecast = forecast
-        scenario.modelrun = modelrun
-
-        return scenario
+        return SimpleNamespace(
+            project=project,
+            forecastseries=forecastseries,
+            model_config=model_config,
+            forecast=forecast,
+            modelrun=modelrun
+        )
 
     @staticmethod
     def create_service_test_scenario(session, **kwargs):

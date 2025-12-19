@@ -94,12 +94,8 @@ class TestUpdateModelrunStatus:
         flow_run.parameters = {'modelrun': modelrun_param}
         return flow_run
 
-    @patch('hermes.flows.modelrun_handler.DatabaseSession')
-    def test_updates_status_with_dict_parameter(
-            self, mock_db_session, session, flows_scenario):
+    def test_updates_status_with_dict_parameter(self, session, flows_scenario):
         """Test status update."""
-        mock_db_session.return_value.__enter__.return_value = session
-
         # Simulate Prefect's dict deserialization of modelrun
         modelrun_dict = {'oid': str(flows_scenario.modelrun.oid)}
 
