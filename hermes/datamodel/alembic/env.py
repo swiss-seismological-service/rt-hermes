@@ -1,9 +1,9 @@
 from logging.config import fileConfig
 
-from alembic_utils.replaceable_entity import register_entities
-from sqlalchemy import engine_from_config, pool
-
 from alembic import context
+from alembic_utils.replaceable_entity import register_entities
+from sqlalchemy import engine_from_config, pool, text
+
 from hermes.config import get_settings
 from hermes.datamodel.alembic.functions import dummy
 from hermes.datamodel.base import ORMBase
@@ -23,6 +23,8 @@ EXCLUDE_TYPES = ['grant_table', 'function', 'view',
                  'materialized_view']
 
 INCLUDE_NAMESPACES = ['hermes']
+
+SEARCH_PATH = 'public'
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -100,6 +102,9 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        connection.execute(text(f"SET search_path TO {SEARCH_PATH}"))
+        connection.commit()
+
         context.configure(
             connection=connection, target_metadata=target_metadata,
             include_name=include_name
