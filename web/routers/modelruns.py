@@ -135,9 +135,13 @@ async def get_gridded_eventcounts(db: DBSessionDep,
     zipped = list(itertools.zip_longest(
         missing_lon[:-1], missing_lat[:-1], fillvalue=fillvalue))
 
-    df = pd.concat([df, pd.DataFrame(
-        [{'grid_lon': lon, 'grid_lat': lat, 'count': 0}
-         for lon, lat in zipped])], ignore_index=True)
+    if zipped:
+        fill_df = pd.DataFrame(zipped, columns=['grid_lon', 'grid_lat'])
+        fill_df['event_count'] = 0
+        if df.empty:
+            df = fill_df
+        else:
+            df = pd.concat([df, fill_df], ignore_index=True)
 
     # return a csv
     csv_buffer = io.StringIO()

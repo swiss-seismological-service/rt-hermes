@@ -94,6 +94,20 @@ async def scenario_web(sync_session_factory):
 
 
 @pytest_asyncio.fixture
+async def scenario_with_events(sync_session_factory):
+    """Test scenario with event forecasts for query testing."""
+    def create_scenario(session):
+        return TestScenarioBuilder.create_scenario_with_events(
+            session,
+            n_catalogs=3,
+            forecastseries={'tags': ['tag1', 'tag2']},
+            model_config={'tags': ['tag1', 'tag3']}
+        )
+
+    return await sync_session_factory(create_scenario)
+
+
+@pytest_asyncio.fixture
 async def test_client(async_session):
     """FastAPI test client with test database session injected.
 

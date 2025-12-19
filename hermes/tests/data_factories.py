@@ -17,6 +17,7 @@ from hermes.repositories.project import (ForecastRepository,
                                          ProjectRepository)
 from hermes.schemas import (EInput, EResultType, EStatus, Forecast,
                             ForecastSeries, ModelConfig, Project)
+from hermes.services.result_service import save_forecast_catalog
 
 
 class TestDataFactory:
@@ -264,3 +265,22 @@ class TestScenarioBuilder:
         scenario = TestScenarioBuilder.create_full_modelrun_scenario(
             session, **kwargs)
         return scenario.forecastseries, scenario.modelrun
+
+    @staticmethod
+    def create_scenario_with_events(session, n_catalogs=3, **kwargs):
+        """Create scenario with event forecasts for testing queries."""
+        scenario = TestScenarioBuilder.create_full_modelrun_scenario(
+            session, **kwargs)
+
+        catalog = TestDataGenerator.create_forecast_catalog(
+            n_catalogs=n_catalogs)
+        save_forecast_catalog(
+            session,
+            scenario.forecastseries.oid,
+            scenario.modelrun.oid,
+            catalog
+        )
+
+        scenario.catalog = catalog
+        scenario.event_count = len(catalog)
+        return scenario

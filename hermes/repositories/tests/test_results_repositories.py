@@ -21,7 +21,8 @@ from hermes.repositories.results import (EventForecastRepository,
                                          TimeStepRepository)
 from hermes.schemas.base import EResultType, EStatus
 from hermes.schemas.result_schemas import GridCell, ModelRun, TimeStep
-from hermes.tests.data_factories import TestDataFactory
+from hermes.services.result_service import save_forecast_catalog
+from hermes.tests.data_factories import TestDataFactory, TestDataGenerator
 
 MODULE_LOCATION = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'data')
@@ -239,7 +240,8 @@ class TestEventForecastRepository:
         ).scalar()
         assert count == len_cat0
 
-    def test_count_by_modelrun(self, session):
+    def test_count_by_modelrun_no_events(self, session):
+        """Test count returns 0 when modelrun has no events."""
         modelrun = ModelRun(oid=uuid4())
         modelrun = ModelRunRepository.create(session, modelrun)
 
@@ -248,7 +250,28 @@ class TestEventForecastRepository:
 
         count = EventForecastRepository.count_by_modelrun(
             session, modelrun.oid)
-        assert count == 0  # No events linked to modelrun
+        assert count == 0
+
+    def test_count_by_modelrun_with_events(self, session, scenario_full):
+        """Test count returns correct number when modelrun has events."""
+        forecast = TestDataFactory.create_forecast(
+            forecastseries_oid=scenario_full.forecastseries.oid
+        )
+        forecast = ForecastRepository.create(session, forecast)
+
+        modelrun = ModelRun(
+            forecast_oid=forecast.oid,
+            modelconfig_oid=scenario_full.model_config.oid
+        )
+        modelrun = ModelRunRepository.create(session, modelrun)
+
+        catalog = TestDataGenerator.create_forecast_catalog(n_catalogs=3)
+        save_forecast_catalog(
+            session, scenario_full.forecastseries.oid, modelrun.oid, catalog)
+
+        count = EventForecastRepository.count_by_modelrun(
+            session, modelrun.oid)
+        assert count == len(catalog)
 
 
 class TestGRParametersRepository:
