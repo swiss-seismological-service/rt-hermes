@@ -1,55 +1,56 @@
 name: tests
 on:
-    workflow_call:
-        inputs:
-            python-versions:
-                required: true
-                type: string
-                default: '["3.12", "3.13"]'
+  workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
+        default: '["3.12", "3.13"]'
 
 jobs:
-    tests:
-        runs-on: ubuntu-latest
+  tests:
+    runs-on: ubuntu-latest
 
-        services:
-            postgres:
-                image: kartoza/postgis
-                env:
-                    POSTGRES_USER: postgres
-                    POSTGRES_PASS: postgres
-                options: >-
-                    --health-cmd "pg_isready -U postgres"
-                    --health-interval 10s
-                    --health-timeout 5s
-                    --health-retries 5
-                ports:
-                    - 5432:5432
+    services:
+      postgres:
+        image: kartoza/postgis
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASS: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
 
-        strategy:
-            matrix:
-                python-version: ${{ fromJson(inputs.python-versions) }}
-        steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ matrix.python-version }}
-            - name: Install dependencies
-              run: |
-                  python -m pip install --upgrade pip setuptools wheel
-                  pip install -e .[dev]
-            - name: Run tests
-              run: |
-                  flake8
-                  pytest --cov=hermes --cov-report=xml
-              env:
-                  POSTGRES_HOST: localhost
-                  POSTGRES_PORT: 5432
-                  POSTGRES_USER: postgres
-                  POSTGRES_PASSWORD: postgres
-            - name: Store the codecov report
-              if: matrix.python-version == '3.12'
-              uses: actions/upload-artifact@v4
-              with:
-                  name: coverage-report
-                  path: coverage.xml
-                  overwrite: true
+    strategy:
+      matrix:
+        python-version: ${{ fromJson(inputs.python-versions) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -e .[dev]
+      - name: Run tests
+        run: |
+          flake8
+          pytest web
+          pytest hermes --cov=hermes --cov-report=xml
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+      - name: Store the codecov report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          overwrite: true
