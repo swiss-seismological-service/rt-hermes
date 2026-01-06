@@ -49,6 +49,7 @@ def create_engine(url: URL, **kwargs) -> Engine:
     engine = _create_engine(
         url,
         future=True,
+        pool_pre_ping=True,
         pool_size=settings.POSTGRES_POOL_SIZE,
         max_overflow=settings.POSTGRES_MAX_OVERFLOW,
         **kwargs,
@@ -70,6 +71,7 @@ def get_engine() -> Engine:
         _engine = _create_engine(
             settings.SQLALCHEMY_DATABASE_URL,
             future=True,
+            pool_pre_ping=True,
             pool_size=settings.POSTGRES_POOL_SIZE,
             max_overflow=settings.POSTGRES_MAX_OVERFLOW,
         )
