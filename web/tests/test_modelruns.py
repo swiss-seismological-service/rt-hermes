@@ -62,12 +62,12 @@ class TestEventCountsEndpoint:
                 "res_lat": 0.5
             }
         )
-
         assert response.status_code == 200
         content = response.text
         assert "grid_lon" in content
         assert "grid_lat" in content
         assert "event_count" in content
+        assert "7.25,46.25,64" in content
 
     async def test_eventcounts_empty_modelrun(
             self, test_client, scenario_web):

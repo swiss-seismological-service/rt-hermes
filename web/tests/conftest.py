@@ -82,7 +82,7 @@ async def sync_session_factory(async_connection):
 
 @pytest_asyncio.fixture
 async def scenario_web(sync_session_factory):
-    """Complete test scenario for web tests."""
+    """Complete test scenario for web tests without events."""
     def create_scenario(session):
         return TestScenarioBuilder.create_full_modelrun_scenario(
             session,
