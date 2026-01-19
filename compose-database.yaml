@@ -1,53 +1,58 @@
 services:
-    postgres:
-        shm_size: 1gb
-        environment:
-            - POSTGRES_DB
-            - POSTGRES_USER
-            - POSTGRES_PASSWORD
-        image: postgis/postgis:18-3.6
-        restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
-        ports:
-            - ${POSTGRES_PORT:-5434}:5432
-        volumes:
-            - hermesdb:/var/lib/postgresql
-            - ${POSTGRES_PGCONF:-./hermes/datamodel/alembic/postgresql.conf}:/etc/postgresql/postgresql.conf:ro
-        command: postgres -c config_file=/etc/postgresql/postgresql.conf
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-        networks:
-            - hermesnet
+  postgres:
+    shm_size: 1gb
+    environment:
+      # Map standard env vars to kartoza/postgis expected names
+      - POSTGRES_DBNAME=${POSTGRES_DB}
+      - POSTGRES_USER
+      - POSTGRES_PASS=${POSTGRES_PASSWORD}
+    image: kartoza/postgis:18-3.6
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+    ports:
+      - ${POSTGRES_PORT:-5434}:5432
+    volumes:
+      - hermesdb:/var/lib/postgresql
+      # kartoza reads extra config from /settings/extra.conf
+      - ${POSTGRES_PGCONF:-./hermes/datamodel/alembic/postgresql.conf}:/settings/extra.conf:ro
+    healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h localhost -U $${POSTGRES_USER}"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    networks:
+      - hermesnet
 
-    webservice:
-        environment:
-            - POSTGRES_DB
-            - POSTGRES_USER
-            - POSTGRES_PASSWORD
-            - POSTGRES_PORT=5432
-            - POSTGRES_HOST=postgres
-            - POSTGRES_POOL_SIZE
-            - POSTGRES_MAX_OVERFLOW
-        image: ghcr.io/swiss-seismological-service/rt-hermes:v1.1.0
-        # build: .
-        depends_on:
-            postgres:
-                condition: service_healthy
-        restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
-        ports:
-            - ${DOCKER_WEB_PORT:-8000}:8000
-        healthcheck:
-            test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs', timeout=5)\""]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-            start_period: 40s
-        networks:
-            - hermesnet
+  webservice:
+    environment:
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_PORT=5432
+      - POSTGRES_HOST=postgres
+      - POSTGRES_POOL_SIZE
+      - POSTGRES_MAX_OVERFLOW
+    image: ghcr.io/swiss-seismological-service/rt-hermes:v1.1.0
+    # build: .
+    depends_on:
+    postgres:
+      condition: service_healthy
+    restart: ${DOCKER_RESTART_POLICY:-unless-stopped}
+    ports:
+      - ${DOCKER_WEB_PORT:-8000}:8000
+    healthcheck:
+    test:
+      [
+        "CMD-SHELL",
+        'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/docs'', timeout=5)"',
+      ]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 40s
+    networks:
+      - hermesnet
 
 volumes:
-    hermesdb: {}
+  hermesdb: {}
 networks:
-    hermesnet: {}
+  hermesnet: {}

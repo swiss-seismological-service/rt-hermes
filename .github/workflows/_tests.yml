@@ -13,7 +13,7 @@ jobs:
 
     services:
       postgres:
-        image: kartoza/postgis
+        image: kartoza/postgis:18-3.6
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASS: postgres

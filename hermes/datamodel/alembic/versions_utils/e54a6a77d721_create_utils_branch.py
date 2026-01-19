@@ -7,9 +7,8 @@ Create Date: 2025-01-07 15:31:52.201188
 """
 from typing import Sequence, Union
 
-from alembic_utils.pg_function import PGFunction
-
 from alembic import op
+from alembic_utils.pg_function import PGFunction
 
 # revision identifiers, used by Alembic.
 revision: str = 'e54a6a77d721'
@@ -26,7 +25,7 @@ def upgrade() -> None:
         definition='''RETURNS void AS $$\n  BEGIN
                 -- No operation\n  END;\n  $$ LANGUAGE plpgsql'''
     )
-    op.create_entity(public_hermes_dummy)
+    op.replace_entity(public_hermes_dummy)
     # ### end Alembic commands ###
 
 
