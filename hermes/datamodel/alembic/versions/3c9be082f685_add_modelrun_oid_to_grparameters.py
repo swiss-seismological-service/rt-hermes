@@ -17,19 +17,32 @@ down_revision: Union[str, None] = 'cd951716a1c8'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+BATCH_SIZE = 10000
+
 
 def upgrade() -> None:
     # Step 1: Add modelrun_oid column as nullable
     op.add_column('grparameters',
                   sa.Column('modelrun_oid', postgresql.UUID(), nullable=True))
 
-    # Step 2: Populate modelrun_oid from modelresult.modelrun_oid
-    op.execute("""
-        UPDATE grparameters
-        SET modelrun_oid = modelresult.modelrun_oid
-        FROM modelresult
-        WHERE grparameters.modelresult_oid = modelresult.oid
-    """)
+    # Step 2: Populate modelrun_oid in batches to avoid long locks
+    conn = op.get_bind()
+
+    while True:
+        result = conn.execute(sa.text(f"""
+            UPDATE grparameters
+            SET modelrun_oid = modelresult.modelrun_oid
+            FROM modelresult
+            WHERE grparameters.modelresult_oid = modelresult.oid
+              AND grparameters.oid IN (
+                  SELECT oid FROM grparameters
+                  WHERE modelrun_oid IS NULL
+                  LIMIT {BATCH_SIZE}
+              )
+        """))
+
+        if result.rowcount == 0:
+            break
 
     # Step 3: Make modelrun_oid non-nullable (should be safe after population)
     op.alter_column('grparameters', 'modelrun_oid',
