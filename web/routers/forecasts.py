@@ -1,15 +1,19 @@
+import io
 from datetime import datetime
 from uuid import UUID
 
+import pandas as pd
 from fastapi import APIRouter, HTTPException, Response
 from seismostats import Catalog
 from sqlalchemy import text
 
+from hermes.schemas.base import EResultType
 from hermes.schemas.result_schemas import ModelRun
-from web.queries.forecasts import OBSERVED_EVENTS
+from web.queries.forecasts import EVENT_COUNT_FORECAST, OBSERVED_EVENTS
 from web.repositories.data import AsyncInjectionObservationRepository
 from web.repositories.database import DBSessionDep, pandas_read_sql_async
-from web.repositories.project import AsyncForecastRepository
+from web.repositories.project import (AsyncForecastRepository,
+                                      AsyncModelConfigRepository)
 from web.repositories.results import AsyncModelRunRepository
 from web.schemas import ForecastJSON
 
@@ -97,3 +101,43 @@ async def get_modelruns(db: DBSessionDep,
         db, forecast_oid)
 
     return db_result
+
+
+@router.get("/{forecast_oid}/eventcounts")
+async def get_forecast_eventcounts(
+        db: DBSessionDep,
+        forecast_oid: UUID,
+        modelconfig_oid: UUID,
+        min_lon: float = -180,
+        min_lat: float = -90,
+        max_lon: float = 180,
+        max_lat: float = 90):
+    """
+    Returns event counts per realization for a forecast and modelconfig.
+    """
+    config = await AsyncModelConfigRepository.get_by_id(db, modelconfig_oid)
+    if config is None:
+        raise HTTPException(status_code=404, detail="ModelConfig not found.")
+    if config.result_type != EResultType.CATALOG:
+        raise HTTPException(
+            status_code=400, detail="Wrong result type for this endpoint.")
+
+    stmt = text(EVENT_COUNT_FORECAST).bindparams(
+        forecast_oid=forecast_oid,
+        modelconfig_oid=modelconfig_oid,
+        min_lon=min_lon,
+        min_lat=min_lat,
+        max_lon=max_lon,
+        max_lat=max_lat,
+    )
+
+    result = await db.execute(stmt)
+    rows = result.fetchall()
+    columns = result.keys()
+
+    df = pd.DataFrame(rows, columns=columns)
+
+    csv_buffer = io.StringIO()
+    df.to_csv(csv_buffer, index=False)
+
+    return Response(content=csv_buffer.getvalue(), media_type="text/csv")

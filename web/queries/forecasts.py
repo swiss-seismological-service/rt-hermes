@@ -12,3 +12,18 @@ AND ST_Within(
     ST_MakeEnvelope(:min_lon, :min_lat, :max_lon, :max_lat, 4326)
 );
 """
+
+EVENT_COUNT_FORECAST = """
+    SELECT res.realization_id,
+           COUNT(*) AS event_count
+    FROM eventforecast ef
+    JOIN modelresult res ON ef.modelresult_oid = res.oid
+    JOIN modelrun mr ON ef.modelrun_oid = mr.oid
+    WHERE mr.forecast_oid = :forecast_oid
+      AND mr.modelconfig_oid = :modelconfig_oid
+      AND ST_Within(
+          ef.coordinates,
+          ST_MakeEnvelope(:min_lon, :min_lat, :max_lon, :max_lat, 4326))
+    GROUP BY res.realization_id
+    ORDER BY res.realization_id;
+"""
