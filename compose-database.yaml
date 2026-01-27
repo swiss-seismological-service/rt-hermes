@@ -31,7 +31,7 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_POOL_SIZE
       - POSTGRES_MAX_OVERFLOW
-    image: ghcr.io/swiss-seismological-service/rt-hermes:v1.2.1
+    image: ghcr.io/swiss-seismological-service/rt-hermes:v1.2.2
     # build: .
     depends_on:
       postgres:
