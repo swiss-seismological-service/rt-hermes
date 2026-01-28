@@ -334,10 +334,11 @@ async def _execute_deployed_models(
                 ModelRunRepository.update_status(
                     session, modelrun.oid, EStatus.RUNNING)
 
-        # Wait for all flow runs to complete
-        finished_runs = await asyncio.gather(*[
-            wait_for_flow_run(flow_run_id=fr.id) for fr, _ in flow_runs
-        ])
+        # Wait for all flow runs to complete, 10 hours timeout
+        finished_runs = await asyncio.gather(
+            *[wait_for_flow_run(flow_run_id=fr.id, timeout=36000)
+              for fr, _ in flow_runs]
+        )
 
         # Count failures (including crashed and cancelled)
         failed_count = 0
