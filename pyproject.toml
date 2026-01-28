@@ -70,7 +70,6 @@ dev = [
     "pytest-env",
     "pytest",
     "setuptools-scm",
-    "tox",
     "twine",
 ]
 

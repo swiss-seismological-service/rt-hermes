@@ -12,12 +12,19 @@
 
 This project is under active development. The goal is to provide an orchestration and scheduling platform for earthquake forecast models.
 
-### 1.2 Caveat
+### 1.1 Models
 
-This project does not distribute any earthquake forecast models. It is merely a framework to run and schedule earthquake forecast models. The models need to be installed separately. Please look at the [hermes-model](https://github.com/swiss-seismological-service/hermes-model) repository for more information on how to install and use a model with HERMES. Current open source models compatible with HERMES are:
-- [EM1](https://gitlab.seismo.ethz.ch/indu/em1)
-- [HM-1D](https://gitlab.seismo.ethz.ch/indu/hm-1d)
-- [etas](https://github.com/swiss-seismological-service/etas)
+This project does not distribute any earthquake forecast models. It is merely a framework to run and schedule earthquake forecast models. The models need to be installed separately. Please look at the [hermes-model](https://github.com/swiss-seismological-service/hermes-model) repository for more information on how to install and use a model with HERMES. Current open source models compatible with HERMES are: [EM1](https://gitlab.seismo.ethz.ch/indu/em1), [HM-1D](https://gitlab.seismo.ethz.ch/indu/hm-1d), [etas](https://github.com/swiss-seismological-service/etas)
+
+### 1.2 Contents
+1. [Overview](#1-overview)
+2. [Installation](#2-installation)
+3. [Using HERMES](#3-using-hermes)
+4. [Advanced: Distributed Workers](#4-advanced-distributed-workers)
+5. [Manage the Services](#5-manage-the-services)
+6. [Concepts / Configurations](https://github.com/swiss-seismological-service/hermes/blob/main/docs/concepts.md)
+7. [Injectionplans](https://github.com/swiss-seismological-service/rt-hermes/blob/main/docs/injectionplan.md)
+8. [Datamodel](https://github.com/swiss-seismological-service/rt-hermes/blob/main/docs/datamodel.pdf)
 
 ## 2 Installation
 
@@ -33,11 +40,11 @@ Also, Python 3.12 or higher is required.
 
 ### 2.2 Installation Methods
 There are mainly 3 possible installation methods to get started with HERMES:
-1. User Installation of the CLI only, assuming services and credentials are already provided, see [2.4](#24-user-installation-of-the-cli-only).
-2. User Installation including the services, see [2.3](#23-user-installation-including-services).
-3. Development installation, if you want to contribute to the development of HERMES, see [2.5](#25-development-installation).
+1. [User Installation including the services](#23-user-installation-including-services)
+2. [User Installation of the CLI only](#24-user-installation-of-the-cli-only), assuming services and credentials are already provided
+3. [Development installation](#25-development-installation), if you want to contribute to the development of HERMES
 
-### 2.3 User Installation including Services
+### 2.3 (Option 1) User Installation including Services
 
 This installation instruction is merely a recommendation for a user of the software. Depending on your preferences and knowledge, you are free to choose a different setup.
 
@@ -122,7 +129,7 @@ pytest rt-hermes/hermes
 Any further `CLI` commands should be run from within the `hermes-project/` folder with the virtual environment activated.
 
 
-### 2.4 User Installation of the CLI only
+### 2.4 (Option 2) User Installation of the CLI only
 
 If the services are already provided to you, you can simply install the `rt-hermes` package in your virtual environment.
 
@@ -156,7 +163,7 @@ hermes db test-connection
 hermes projects list
 ```
 
-### 2.5 Development Installation
+### 2.5 (Option 3) Development Installation
 If you want to contribute to the development of HERMES, I suggest the following structure:
 
 ```bash
@@ -364,7 +371,7 @@ To set up a long running worker, you need to install rt-hermes on the worker mac
 hermes forecastseries serve fs_induced --concurrency-limit=...
 ```
 
-## 4.1 Installation
+### 4.1 Installation
 
 You could also install it from PyPI, but here we describe the installation from source, which is more flexible for development and debugging.
 
