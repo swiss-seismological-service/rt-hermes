@@ -14,7 +14,10 @@ This project is under active development. The goal is to provide an orchestratio
 
 ### 1.2 Caveat
 
-This project does not distribute any earthquake forecast models. It is merely a framework to run and schedule earthquake forecast models. The models need to be installed separately. Please look at the [hermes-model](https://github.com/swiss-seismological-service/hermes-model) repository for more information on how to install and use a model with HERMES.
+This project does not distribute any earthquake forecast models. It is merely a framework to run and schedule earthquake forecast models. The models need to be installed separately. Please look at the [hermes-model](https://github.com/swiss-seismological-service/hermes-model) repository for more information on how to install and use a model with HERMES. Current open source models compatible with HERMES are:
+- [EM1](https://gitlab.seismo.ethz.ch/indu/em1)
+- [HM-1D](https://gitlab.seismo.ethz.ch/indu/hm-1d)
+- [etas](https://github.com/swiss-seismological-service/etas)
 
 ## 2 Installation
 
@@ -23,17 +26,16 @@ This project does not distribute any earthquake forecast models. It is merely a 
 Possibly, the following system dependencies are required to install some of the Python dependencies. On a Debian-based system, you can install them using:
 
 ```bash
-sudo apt-get install build-essential libpq-dev python3-dev
+sudo apt-get install build-essential libpq-dev python3-dev python3-venv
 ```
 
 Also, Python 3.12 or higher is required.
 
 ### 2.2 Installation Methods
 There are mainly 3 possible installation methods to get started with HERMES:
-1. User Installation of the CLI only, assuming services and credentials are already provided, see [2.4]().
-2. User Installation including the services, see [2.3]().
-3. Development installation, if you want to contribute to the development of HERMES, see [2.5]().
-
+1. User Installation of the CLI only, assuming services and credentials are already provided, see [2.4](#24-user-installation-of-the-cli-only).
+2. User Installation including the services, see [2.3](#23-user-installation-including-services).
+3. Development installation, if you want to contribute to the development of HERMES, see [2.5](#25-development-installation).
 
 ### 2.3 User Installation including Services
 
@@ -45,7 +47,7 @@ This section describes the installation from scratch, including the required ser
 
 Follow the instructions [here](https://docs.docker.com/get-docker/)
 
-### 2.3.2 Setup
+#### 2.3.2 Setup
 We opt for the following project structure:
 
 ```bash
@@ -62,6 +64,7 @@ This allows us to have the software code locally available, while keeping the pr
 
 Create the project folder and set up a virtual environment:
 ```bash
+# create and go to folder hermes-project
 mkdir hermes-project && cd hermes-project
 python3 -m venv env # python>=3.12 is required
 source env/bin/activate
@@ -70,7 +73,9 @@ pip install -U pip wheel setuptools
 
 Clone the `rt-hermes` repository and the models you want to use:
 ```bash
+# inside the hermes-project/ folder
 git clone https://github.com/swiss-seismological-service/rt-hermes.git
+# create and go to models/ folder
 mkdir models && cd models
 git clone https://gitlab.seismo.ethz.ch/indu/em1.git
 # optionally, clone other models too
@@ -79,32 +84,37 @@ cd ..
 
 Install the `rt-hermes` package in editable mode along with the development dependencies, as well as the models:
 ```bash
+# inside the hermes-project/ folder
 pip install -e ./rt-hermes[dev]
 pip install -e ./models/em1
 ```
 
-### 2.3.3 Settings
+#### 2.3.3 Settings
+Copy the example environment settings to a new `.env` file:
+
+```bash
+# inside the hermes-project/ folder
+cp rt-hermes/.env.example .env
+```
 
 The settings in the `.env` file work out of the box in a local setup, but are not secure. Please change the credentials, ports and connection strings in the `.env` file if deploying in an externally accessible environment.
 
-```bash
-cp .env.example .env
-```
 
-### 2.3.4 Start the services
+#### 2.3.4 Start the services
 You can now create the Docker services for the Prefect Server and the PostgreSQL database using the following command:
 
 ```bash
+# go to the rt-hermes/ folder
 cd rt-hermes
 docker compose --env-file ../.env -f compose-prefect.yaml -f compose-database.yaml up -d
 cd ..
 ```
 
-### 2.3.5 Initialize the database and test the setup
+#### 2.3.5 Initialize the database and test the setup
 To verify that the installation was successful, you can initialize the database and run the tests:
 
 ```bash
-# make sure you're in the hermes-project/ folder with the virtual environment activated
+# inside the hermes-project/ folder, with the virtual environment activated
 hermes db initialize
 pytest rt-hermes/hermes
 ```
@@ -112,12 +122,12 @@ pytest rt-hermes/hermes
 Any further `CLI` commands should be run from within the `hermes-project/` folder with the virtual environment activated.
 
 
-## 2.4 User Installation of the CLI only
+### 2.4 User Installation of the CLI only
 
 If the services are already provided to you, you can simply install the `rt-hermes` package in your virtual environment.
 
 
-### 2.4.1 Setup virtual environment and install rt-hermes
+#### 2.4.1 Setup virtual environment and install rt-hermes
 Create a virtual environment using Python 3.12 or higher:
 
 ```bash
@@ -128,7 +138,7 @@ pip install -U pip wheel setuptools
 pip install rt-hermes
 ```
 
-### 2.4.2 Settings
+#### 2.4.2 Settings
 Copy the example environment settings from the `rt-hermes` package into a new `.env` file and adjust them to your provided services.
 
 You can find the template of the `.env`file [here](https://github.com/swiss-seismological-service/rt-hermes/blob/main/.env.example).
@@ -138,7 +148,7 @@ touch .env
 # copy the content of the .env.example file into the .env file
 ```
 
-### 2.4.3 Test the setup
+#### 2.4.3 Test the setup
 Test the connectivity to the services by running:
 
 ```bash
@@ -146,7 +156,7 @@ hermes db test-connection
 hermes projects list
 ```
 
-## 2.5 Development Installation
+### 2.5 Development Installation
 If you want to contribute to the development of HERMES, I suggest the following structure:
 
 ```bash
@@ -154,11 +164,10 @@ If you want to contribute to the development of HERMES, I suggest the following 
 ├── rt-hermes/          # the cloned repository, working directory
     ├── .env            # environment file
     └── env/            # virtual environment
-├── ml1/
-└── em1/
+└── em1/                # cloned model repository
 ```
 
-### 2.5.1 Setup
+#### 2.5.1 Setup
 Clone the `rt-hermes` repository and the models you want to use:
 ```bash
 git clone https://github.com/swiss-seismological-service/rt-hermes.git
@@ -166,31 +175,43 @@ git clone https://gitlab.seismo.ethz.ch/indu/em1.git
 # optionally, clone other models too
 ```
 
+Create a virtual environment.
+```bash
+# go to the rt-hermes/ folder
+cd rt-hermes
+python3 -m venv env # python>=3.12 is required
+source env/bin/activate
+pip install -U pip wheel setuptools
+```
+
 Install the `rt-hermes` package in editable mode along with the development dependencies, as well as the models:
 ```bash
-cd rt-hermes
+# inside the rt-hermes/ folder
 pip install -e ./rt-hermes[dev]
 pip install -e ../em1
 ```
 
-### 2.5.2 Settings
+#### 2.5.2 Settings
 Copy the example environment settings into a new `.env` file and adjust them to your needs.
 
 ```bash
+# inside the rt-hermes/ folder
 cp .env.example .env
 ```
 
-### 2.5.3 Start the services
+#### 2.5.3 Start the services
 You can now create the Docker services for the Prefect Server and the PostgreSQL database using the following command:
 
 ```bash
+# inside the rt-hermes/ folder
 docker compose --env-file .env -f compose-prefect.yaml -f compose-database.yaml up -d
 ```
 
-### 2.5.4 Initialize the database and test the setup
+#### 2.5.4 Initialize the database and test the setup
 To verify that the installation was successful, you can initialize the database and run the tests:
 
 ```bash
+# inside the rt-hermes/ folder, with the virtual environment activated
 hermes db initialize
 pytest hermes
 pytest web
@@ -212,15 +233,14 @@ You need to adjust the example configuration files to your local setup. In parti
 Update the absolute path `fdsnws_url` in `examples/induced/forecastseries.json` to your local path of the `examples/induced` folder. Also, to use the scforge HYDWS service, you need to be connected to the ETH network or a VPN.
 
 ### 3.3 Load an example configuration
+The CLI can be used to interact with the HERMES service. For a list of available commands, run `hermes --help`. Most commands have a `--help` option to show the available options.
 
-```
+```bash
 hermes projects create project_induced --config examples/induced/project.json
 hermes forecastseries create fs_induced --config examples/induced/forecastseries.json --project project_induced
 hermes injectionplans create default --forecastseries fs_induced --file examples/induced/multiply_template.json
 hermes models create em1 --config examples/induced/model_config.json
 ```
-
-The CLI can be used to interact with the HERMES service. For a list of available commands, run `hermes --help`. Most commands have a `--help` option to show the available options.
 
 Most setting should be self-explanatory, but more information can be found in the [concepts documentation](https://github.com/swiss-seismological-service/hermes/blob/main/docs/concepts.md).
 
@@ -239,7 +259,7 @@ This starts a single forecast directly on the local machine.
 To use advanced features like scheduling, it is necessary to start a process which "serves" the forecastseries. This will be a long-running process which will execute forecasts as they are requested by the schedule or by the CLI, so just let the process run in a terminal, and open a new terminal to execute further commands.
 
 ```
-hermes forecastseries serve fs_induced --concurrency-limit=1
+hermes forecastseries serve fs_induced --concurrency-limit=2
 ```
 
 Depending on your model, you need to control how many modelruns are executed in parallel, you can do that by specifying the `--concurrency-limit` option. Please consider, that also the requesting of the input data can become a limiting factor if you are requesting a lot of data at the same time (eg. requests to an FDSNWS).
@@ -285,15 +305,15 @@ A Python client library is provided for easier access to the RT-HERMES data and 
 pip install hermes-client
 ```
 
-And a documentation can be found here: [https://hermes-client.readthedocs.io](https://hermes-client.readthedocs.io)
+And the documentation can be found here: [https://hermes-client.readthedocs.io](https://hermes-client.readthedocs.io)
 
 
 ### 3.6 Debugging
 
-Once you have the `oid` of the modelruns, you can use that to more easily debug the runs. You can download the exact configuration and input files the modelrun used. Navigate to the following URL: [http://localhost:8000/v1/modelruns/<modelrun_oid>/input](http://localhost:8000/v1/modelruns/<modelrun_oid>/input) to download the input files, which you can then directly use to run the model manually outside of HERMES for debugging purposes.
+Once you have the `oid` of a modelruns, you can use that to more easily debug the runs. You can download the exact configuration and input files the modelrun used. Navigate to the following URL: [http://localhost:8000/v1/modelruns/<modelrun_oid>/input](http://localhost:8000/v1/modelruns/<modelrun_oid>/input) to download the input files, which you can then directly use to run the model manually outside of HERMES for debugging purposes.
 
 ### 3.7 Long Running Services
-To continuously serve forecasts, you can set up a long running service using systemd. If you do this on the same this only requires to daemonize the command mentioned in section [3.5](#35-optional-schedule-forecasts-or-execute-replays).
+To continuously serve forecasts, on eg. a server, you can set up a long running service using systemd. If you do this on the same machine as the services run, this only requires to daemonize the serve command. If you'd rather have the model run on a different machine, please refer to [4. Distributed Workers](#4-advanced-distributed-workers) in the next chapter.
 
 Create a new service file, e.g. `/etc/systemd/system/hermes-forecastseries.service` with the following content:
 
@@ -333,7 +353,7 @@ sudo journalctl -u hermes-forecastseries.service -f
 
 ## 4. (Advanced) Distributed Workers
 
-HERMES supports the execution of models on distributed workers using Prefect Workers. This allows to scale the execution of models across multiple machines.
+HERMES supports the execution of models on different machines. This allows to more easily scale the execution of models.
 
 > [!IMPORTANT]
 > Prefect offers different ways of running distributed workers. The most simple way is to *serve a flow*, which is described in the previous sections. This has some limitations, and is less scalable. However, for the current version of HERMES, we chose this approach for simplicity and ease of use. 
