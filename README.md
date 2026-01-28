@@ -10,7 +10,9 @@
 
 ## 1 Overview
 
-This project is under active development. The goal is to provide an orchestration and scheduling platform for earthquake forecast models.
+This software is an orchestration and scheduling platform for earthquake forecast models.
+
+Currently the two main usecases are [Operational Earthquake Forecasting (OEF)](https://oef.efehr.org/), and [Induced Seismicity Forecasting](https://project-deep.deepgeothermal.org/atls/), see also [[1]](https://meetingorganizer.copernicus.org/EGU25/EGU25-7406.html). Dashboards and visualizations, displaying the forecast results for both usecases are being actively developed at the Swiss Seismological Service.
 
 ### 1.1 Models
 
@@ -20,7 +22,7 @@ This project does not distribute any earthquake forecast models. It is merely a 
 1. [Overview](#1-overview)
 2. [Installation](#2-installation)
 3. [Using HERMES](#3-using-hermes)
-4. [Advanced: Distributed Workers](#4-advanced-distributed-workers)
+4. [Distributed Workers](#4-advanced-distributed-workers)
 5. [Manage the Services](#5-manage-the-services)
 6. [Concepts / Configurations](https://github.com/swiss-seismological-service/hermes/blob/main/docs/concepts.md)
 7. [Injectionplans](https://github.com/swiss-seismological-service/rt-hermes/blob/main/docs/injectionplan.md)
@@ -40,9 +42,9 @@ Also, Python 3.12 or higher is required.
 
 ### 2.2 Installation Methods
 There are mainly 3 possible installation methods to get started with HERMES:
-1. [User Installation including the services](#23-user-installation-including-services)
-2. [User Installation of the CLI only](#24-user-installation-of-the-cli-only), assuming services and credentials are already provided
-3. [Development installation](#25-development-installation), if you want to contribute to the development of HERMES
+1. [User Installation including the services](#23-option-1-user-installation-including-services)
+2. [User Installation of the CLI only](#24-option-2-user-installation-of-the-cli-only), assuming services and credentials are already provided
+3. [Development installation](#25-option-3-development-installation), if you want to contribute to the development of HERMES
 
 ### 2.3 (Option 1) User Installation including Services
 
