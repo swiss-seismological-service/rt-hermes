@@ -8,7 +8,7 @@
 
 ©2026 ETH Zurich
 
-## 1. Overview
+## 1 Overview
 
 This project is under active development. The goal is to provide an orchestration and scheduling platform for earthquake forecast models.
 
@@ -319,8 +319,8 @@ And the documentation can be found here: [https://hermes-client.readthedocs.io](
 
 Once you have the `oid` of a modelruns, you can use that to more easily debug the runs. You can download the exact configuration and input files the modelrun used. Navigate to the following URL: [http://localhost:8000/v1/modelruns/<modelrun_oid>/input](http://localhost:8000/v1/modelruns/<modelrun_oid>/input) to download the input files, which you can then directly use to run the model manually outside of HERMES for debugging purposes.
 
-### 3.7 Long Running Services
-To continuously serve forecasts, on eg. a server, you can set up a long running service using systemd. If you do this on the same machine as the services run, this only requires to daemonize the serve command. If you'd rather have the model run on a different machine, please refer to [4. Distributed Workers](#4-advanced-distributed-workers) in the next chapter.
+### 3.7 Long Running Processes
+To continuously serve forecasts, on eg. a server, you can set up a long running process using systemd. If you do this on the same machine as the services run, this only requires to daemonize the serve command. If you'd rather have the model run on a different machine, please refer to [4. Distributed Workers](#4-advanced-distributed-workers) in the next chapter.
 
 Create a new service file, e.g. `/etc/systemd/system/hermes-forecastseries.service` with the following content:
 
@@ -358,7 +358,7 @@ sudo journalctl -u hermes-forecastseries.service -f
 > [!WARNING]
 > Do not forget to restart the service, if you change the configuration or the code.
 
-## 4. (Advanced) Distributed Workers
+## 4 (Advanced) Distributed Workers
 
 HERMES supports the execution of models on different machines. This allows to more easily scale the execution of models.
 
