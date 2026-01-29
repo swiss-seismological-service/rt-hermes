@@ -501,7 +501,17 @@ psql -h localhost -p 5432 -U postgres -d postgres < backup.sql
 hermes db upgrade
 ```
 
+### 6. Publishing a new Version
+Publishing a new version will build and push the package to PyPI as well as build and push a new Docker image of the webservice to the github container registry.
 
+All you need to do, is to create a new git tag with the version number, e.g. `v1.2.3`, and push the tag to github.
+
+```bash
+git tag v1.2.3
+git push --tags
+```
+
+This will automatically trigger the github actions to build and publish the new version.
 
 
 
