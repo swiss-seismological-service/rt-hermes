@@ -14,6 +14,9 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.callback()
 def main(ctx: typer.Context):
+    # skip database check during shell completion
+    if ctx.resilient_parsing:
+        return
     # make sure that the database is initialized and up to date
     if ctx.invoked_subcommand != "db":
         check_db()
