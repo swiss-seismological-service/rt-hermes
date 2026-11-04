@@ -45,6 +45,7 @@ dependencies = [
     "numpy<2.4",
     "pandas",
     "prefect<3.6.0",
+    "fastapi<0.131",  # prefect 3.5 is incompatible with fastapi>=0.131
     "psycopg2",
     "pydantic-settings",
     "pydantic",
