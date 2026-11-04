@@ -226,6 +226,21 @@ pytest hermes
 pytest web
 ```
 
+### 2.6 Shell Completion (Optional)
+
+The `hermes` CLI supports tab completion for commands and subcommands in bash, zsh, fish, and PowerShell. To enable it, run the following command once after installation:
+
+```bash
+hermes --install-completion
+```
+
+Then restart your shell (or `source ~/.zshrc` / `source ~/.bashrc`). After that, you can use tab completion:
+
+```bash
+hermes s<TAB>         # completes to: hermes schedules
+hermes schedules <TAB> # shows: list, show, create, delete, activate, deactivate, catchup
+```
+
 ## 3 Using HERMES
 Basically, you should now be able to run models using HERMES. If you have your own models and usecases, go ahead and configure them according to the [concepts documentation](https://github.com/swiss-seismological-service/hermes/blob/main/docs/concepts.md).
 
