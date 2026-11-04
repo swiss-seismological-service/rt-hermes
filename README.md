@@ -21,8 +21,7 @@ This project does not distribute any earthquake forecast models. It is merely a 
 ### 1.2 Contents
 1. [Overview](#1-overview)
 2. [Installation](#2-installation)
-3. [Shell Completion](#26-shell-completion-optional)
-4. [Using HERMES](#3-using-hermes)
+3. [Using HERMES](#3-using-hermes)
 4. [Distributed Workers](#4-advanced-distributed-workers)
 5. [Manage the Services](#5-manage-the-services)
 6. [Concepts / Configurations](https://github.com/swiss-seismological-service/hermes/blob/main/docs/concepts.md)
